@@ -1,6 +1,12 @@
 import unittest
 
-from columnar_storage.catalog import AttachedDatabase, ColumnDefinition, Schema, TableDefinition
+from columnar_storage.catalog import (
+    AttachedDatabase,
+    ColumnDefinition,
+    DuckTableEntry,
+    Schema,
+    TableDefinition,
+)
 from columnar_storage.storage import DataTable
 
 
@@ -29,6 +35,7 @@ class CatalogQuestionTests(unittest.TestCase):
         entry = schema.create_table(definition, table)
         looked_up = schema.get_table("events")
 
+        assert isinstance(entry, DuckTableEntry)
         self.assertEqual(entry.definition.name, "events")
         self.assertIs(entry.data_table, table)
         self.assertIsNotNone(looked_up)
