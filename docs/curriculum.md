@@ -21,6 +21,55 @@ By the end of the exercise, the candidate should be able to:
 
 Implement the catalog path owned by `AttachedDatabase`: `AttachedDatabase -> Catalog -> Schema -> DuckTableEntry -> DataTable`.
 
+### Top-level class diagram
+
+```mermaid
+classDiagram
+	class AttachedDatabase {
+		+name: str
+		+catalog: Catalog
+		+get_catalog() Catalog
+	}
+
+	class Catalog {
+		+schemas: dict[str, Schema]
+		+create_schema(schema_name: str) Schema
+		+get_schema(schema_name: str) Schema | None
+	}
+
+	class Schema {
+		+name: str
+		+tables: dict[str, DuckTableEntry]
+		+create_table(definition: TableDefinition, data_table: Any) DuckTableEntry
+		+get_table(table_name: str) DuckTableEntry | None
+	}
+
+	class DuckTableEntry {
+		+definition: TableDefinition
+		+data_table: DataTable
+	}
+
+	class TableDefinition {
+		+name: str
+		+columns: list[ColumnDefinition]
+	}
+
+	class ColumnDefinition {
+		+name: str
+		+python_type: type
+		+nullable: bool
+	}
+
+	class DataTable
+
+	AttachedDatabase --> Catalog : owns
+	Catalog --> Schema : registers
+	Schema --> DuckTableEntry : stores
+	DuckTableEntry --> TableDefinition : references
+	DuckTableEntry --> DataTable : attaches
+	TableDefinition --> ColumnDefinition : contains
+```
+
 ### Goal
 Expose the catalog from `AttachedDatabase`, create schemas in `Catalog`, and attach a `DataTable` to each `DuckTableEntry`.
 

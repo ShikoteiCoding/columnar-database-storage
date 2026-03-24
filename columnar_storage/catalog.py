@@ -75,8 +75,8 @@ class Schema:
             table_entry = DuckTableEntry(definition, data_table)
             self.tables[definition.name] = table_entry
             return table_entry
-        else:
-            raise ValueError(f"Table already exist: {definition.name}")
+        
+        raise ValueError(f"Table already exist: {definition.name}")
 
     def get_table(self, table_name: str) -> DuckTableEntry | None:
         """Return a table entry by name."""
