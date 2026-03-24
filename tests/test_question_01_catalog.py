@@ -11,10 +11,12 @@ class CatalogQuestionTests(unittest.TestCase):
         database = AttachedDatabase("demo")
         catalog = database.get_catalog()
         created = catalog.create_schema("analytics")
+        looked_up = catalog.get_schema("analytics")
 
         self.assertIs(database.get_catalog(), catalog)
         self.assertIsInstance(created, Schema)
-        self.assertIs(catalog.get_schema("analytics"), created)
+        self.assertIsNotNone(looked_up)
+        self.assertIs(looked_up, created)
 
     def test_schema_registers_table_entry(self) -> None:
         schema = Schema("analytics")
@@ -25,10 +27,12 @@ class CatalogQuestionTests(unittest.TestCase):
         table = DataTable(definition, row_group_size=4)
 
         entry = schema.create_table(definition, table)
+        looked_up = schema.get_table("events")
 
         self.assertEqual(entry.definition.name, "events")
         self.assertIs(entry.data_table, table)
-        self.assertIs(schema.get_table("events"), entry)
+        self.assertIsNotNone(looked_up)
+        self.assertIs(looked_up, entry)
 
     def test_schema_rejects_duplicate_table_names(self) -> None:
         schema = Schema("analytics")
