@@ -12,7 +12,7 @@ class MiniDatabaseEngine:
     """Small facade over catalog and storage objects.
 
     Goal for the candidate:
-    - create schemas and tables
+    - create schemas and tables through the attached database catalog
     - insert and scan rows through logical names
     - expose checkpoint metadata from the underlying `DataTable`
     """
@@ -21,7 +21,7 @@ class MiniDatabaseEngine:
         self.database = AttachedDatabase(database_name)
 
     def create_schema(self, schema_name: str) -> None:
-        """Create a schema if needed."""
+        """Create a schema if needed through the attached database catalog."""
         raise NotImplementedError("Question 9: implement MiniDatabaseEngine.create_schema()")
 
     def create_table(self, schema_name: str, table_name: str, columns: list[ColumnDefinition]) -> None:

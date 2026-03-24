@@ -19,10 +19,10 @@ By the end of the exercise, the candidate should be able to:
 
 ## Question 1 - Catalog hierarchy
 
-Implement the catalog path from `AttachedDatabase` to `DataTable`.
+Implement the catalog path owned by `AttachedDatabase`: `AttachedDatabase -> Catalog -> Schema -> DuckTableEntry -> DataTable`.
 
 ### Goal
-Create schemas, register table definitions, and attach a `DataTable` to each `DuckTableEntry`.
+Expose the catalog from `AttachedDatabase`, create schemas in `Catalog`, and attach a `DataTable` to each `DuckTableEntry`.
 
 ### Guidance
 - Make schema creation idempotent or raise a clear error.

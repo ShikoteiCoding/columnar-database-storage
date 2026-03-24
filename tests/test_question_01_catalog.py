@@ -7,12 +7,14 @@ from columnar_storage.storage import DataTable
 class CatalogQuestionTests(unittest.TestCase):
     """Question 1: catalog hierarchy."""
 
-    def test_database_creates_and_returns_schema(self) -> None:
+    def test_database_exposes_catalog_that_creates_and_returns_schema(self) -> None:
         database = AttachedDatabase("demo")
-        created = database.create_schema("analytics")
+        catalog = database.get_catalog()
+        created = catalog.create_schema("analytics")
 
+        self.assertIs(database.get_catalog(), catalog)
         self.assertIsInstance(created, Schema)
-        self.assertIs(database.get_schema("analytics"), created)
+        self.assertIs(catalog.get_schema("analytics"), created)
 
     def test_schema_registers_table_entry(self) -> None:
         schema = Schema("analytics")

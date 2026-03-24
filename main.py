@@ -44,7 +44,7 @@ def run_demo() -> dict[str, Any]:
     ]
     engine.insert_rows("analytics", "events", rows)
 
-    table_entry = engine.database.get_schema("analytics").get_table("events")
+    table_entry = engine.database.get_catalog().get_schema("analytics").get_table("events")
     first_row_group = table_entry.data_table.row_groups.row_groups.nodes[0]
     first_row_group.delete_row(1)
 

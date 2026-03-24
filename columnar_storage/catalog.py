@@ -103,7 +103,7 @@ class AttachedDatabase:
     """Top-level object that owns a catalog.
 
     Goal for the candidate:
-    - expose a small entry point into the catalog hierarchy
+    - expose the owned catalog
     - behave like one attached database file in DuckDB terminology
     """
 
@@ -111,10 +111,6 @@ class AttachedDatabase:
         self.name = name
         self.catalog = Catalog()
 
-    def create_schema(self, schema_name: str) -> Schema:
-        """Delegate schema creation to the catalog."""
-        raise NotImplementedError("Question 1: implement AttachedDatabase.create_schema()")
-
-    def get_schema(self, schema_name: str) -> Schema:
-        """Delegate schema lookup to the catalog."""
-        raise NotImplementedError("Question 1: implement AttachedDatabase.get_schema()")
+    def get_catalog(self) -> Catalog:
+        """Return the owned catalog."""
+        return self.catalog
