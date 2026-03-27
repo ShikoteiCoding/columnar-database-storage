@@ -26,14 +26,14 @@ class BlockPointer:
     block_id: int | None
     offset: int = 0
 
-    def to_dict(self) -> dict[str, Any]:
+    def serialize(self) -> dict[str, Any]:
         """Serialize the pointer."""
-        raise NotImplementedError("Question 3: implement BlockPointer.to_dict()")
+        raise NotImplementedError("Question 3: implement BlockPointer.serialize()")
 
     @classmethod
-    def from_dict(cls, payload: dict[str, Any]) -> "BlockPointer":
+    def deserialize(cls, payload: dict[str, Any]) -> "BlockPointer":
         """Deserialize the pointer."""
-        raise NotImplementedError("Question 3: implement BlockPointer.from_dict()")
+        raise NotImplementedError("Question 3: implement BlockPointer.deserialize()")
 
 
 class DataBlock:
