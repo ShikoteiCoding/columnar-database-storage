@@ -69,11 +69,11 @@ class BaseStatistics:
         """Return whether all non-null values are the same."""
         return self.constant
 
-    def to_dict(self) -> dict[str, Any]:
+    def serialize(self) -> dict[str, Any]:
         """Serialize the statistics object."""
-        return self.__dict__
+        raise NotImplementedError("Question 3: implement BaseStatistics.serialize()")
 
     @classmethod
-    def from_dict(cls, payload: dict[str, Any]) -> BaseStatistics:
+    def deserialize(cls, payload: dict[str, Any]) -> "BaseStatistics":
         """Deserialize the statistics object."""
-        raise NotImplementedError("Question 3: implement BaseStatistics.from_dict()")
+        raise NotImplementedError("Question 3: implement BaseStatistics.deserialize()")

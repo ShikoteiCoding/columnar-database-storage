@@ -33,14 +33,14 @@ class DataPointer:
     compression_type: str = "uncompressed"
     constant_value: Any = None
 
-    def to_dict(self) -> dict[str, Any]:
+    def serialize(self) -> dict[str, Any]:
         """Serialize the data pointer."""
-        raise NotImplementedError("Question 3: implement DataPointer.to_dict()")
+        raise NotImplementedError("Question 3: implement DataPointer.serialize()")
 
     @classmethod
-    def from_dict(cls, payload: dict[str, Any]) -> "DataPointer":
+    def deserialize(cls, payload: dict[str, Any]) -> "DataPointer":
         """Deserialize the data pointer."""
-        raise NotImplementedError("Question 3: implement DataPointer.from_dict()")
+        raise NotImplementedError("Question 3: implement DataPointer.deserialize()")
 
 
 class VersionInfo:
@@ -63,9 +63,9 @@ class VersionInfo:
         """Return whether the row id is deleted."""
         raise NotImplementedError("Question 6: implement VersionInfo.is_deleted()")
 
-    def to_dict(self) -> dict[str, Any]:
+    def serialize(self) -> dict[str, Any]:
         """Serialize delete metadata."""
-        raise NotImplementedError("Question 8: implement VersionInfo.to_dict()")
+        raise NotImplementedError("Question 8: implement VersionInfo.serialize()")
 
 
 class ColumnSegment(SegmentBase):
@@ -143,9 +143,9 @@ class RowGroupPointer:
     data_pointers: list[list[dict[str, Any]]] = field(default_factory=list)
     delete_pointers: list[dict[str, Any]] = field(default_factory=list)
 
-    def to_dict(self) -> dict[str, Any]:
+    def serialize(self) -> dict[str, Any]:
         """Serialize the row group pointer."""
-        raise NotImplementedError("Question 8: implement RowGroupPointer.to_dict()")
+        raise NotImplementedError("Question 8: implement RowGroupPointer.serialize()")
 
 
 class RowGroup(SegmentBase):
