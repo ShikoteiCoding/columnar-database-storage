@@ -35,12 +35,12 @@ class DataPointer:
 
     def serialize(self) -> dict[str, Any]:
         """Serialize the data pointer."""
-        raise NotImplementedError("Question 3: implement DataPointer.serialize()")
+        return self.__dict__
 
     @classmethod
-    def deserialize(cls, payload: dict[str, Any]) -> "DataPointer":
+    def deserialize(cls, payload: dict[str, Any]) -> DataPointer:
         """Deserialize the data pointer."""
-        raise NotImplementedError("Question 3: implement DataPointer.deserialize()")
+        return DataPointer(**payload)
 
 
 class VersionInfo:

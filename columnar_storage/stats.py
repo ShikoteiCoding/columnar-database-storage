@@ -43,10 +43,12 @@ class BaseStatistics:
                 if self.max_value is None or value > self.max_value:
                     self.max_value = value
         
-        if self.null_count == 0:
-            if self.min_value == self.max_value:
-                self.constant = True
-                self.constant_value = self.min_value
+        if self.min_value == self.max_value:
+            self.constant = True
+            self.constant_value = self.min_value
+        else:
+            self.constant = False
+            self.constant_value = None
         
             
 
@@ -59,10 +61,12 @@ class BaseStatistics:
             self.min_value = min(self.min_value, other.min_value) if self.min_value else other.min_value
             self.max_value = max(self.max_value, other.max_value) if self.max_value else other.max_value
 
-        if self.null_count == 0:
-            if self.min_value == self.max_value:
-                self.constant = True
-                self.constant_value = self.min_value
+        if self.min_value == self.max_value:
+            self.constant = True
+            self.constant_value = self.min_value
+        else:
+            self.constant = False
+            self.constant_value = None
 
 
     def is_constant(self) -> bool:
@@ -71,9 +75,9 @@ class BaseStatistics:
 
     def serialize(self) -> dict[str, Any]:
         """Serialize the statistics object."""
-        raise NotImplementedError("Question 3: implement BaseStatistics.serialize()")
+        return self.__dict__
 
     @classmethod
-    def deserialize(cls, payload: dict[str, Any]) -> "BaseStatistics":
+    def deserialize(cls, payload: dict[str, Any]) -> BaseStatistics:
         """Deserialize the statistics object."""
-        raise NotImplementedError("Question 3: implement BaseStatistics.deserialize()")
+        return BaseStatistics(**payload)
