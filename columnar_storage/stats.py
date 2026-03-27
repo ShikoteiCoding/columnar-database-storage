@@ -30,21 +30,50 @@ class BaseStatistics:
 
     def update(self, values: list[Any]) -> None:
         """Update the statistics from a batch of values."""
-        raise NotImplementedError("Question 3: implement BaseStatistics.update()")
+        self.row_count += len(values)
 
-    def merge(self, other: "BaseStatistics") -> None:
+        for value in values:
+
+            if value is None:
+                self.null_count += 1
+            else:
+                if self.min_value is None or value < self.min_value:
+                    self.min_value = value
+                
+                if self.max_value is None or value > self.max_value:
+                    self.max_value = value
+        
+        if self.null_count == 0:
+            if self.min_value == self.max_value:
+                self.constant = True
+                self.constant_value = self.min_value
+        
+            
+
+    def merge(self, other: BaseStatistics) -> None:
         """Merge another statistics object into this one."""
-        raise NotImplementedError("Question 3: implement BaseStatistics.merge()")
+        self.row_count += other.row_count
+        self.null_count += other.null_count
+
+        if other.null_count != other.row_count:
+            self.min_value = min(self.min_value, other.min_value) if self.min_value else other.min_value
+            self.max_value = max(self.max_value, other.max_value) if self.max_value else other.max_value
+
+        if self.null_count == 0:
+            if self.min_value == self.max_value:
+                self.constant = True
+                self.constant_value = self.min_value
+
 
     def is_constant(self) -> bool:
         """Return whether all non-null values are the same."""
-        raise NotImplementedError("Question 3: implement BaseStatistics.is_constant()")
+        return self.constant
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize the statistics object."""
-        raise NotImplementedError("Question 3: implement BaseStatistics.to_dict()")
+        return self.__dict__
 
     @classmethod
-    def from_dict(cls, payload: dict[str, Any]) -> "BaseStatistics":
+    def from_dict(cls, payload: dict[str, Any]) -> BaseStatistics:
         """Deserialize the statistics object."""
         raise NotImplementedError("Question 3: implement BaseStatistics.from_dict()")
