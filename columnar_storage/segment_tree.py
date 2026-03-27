@@ -26,7 +26,7 @@ class SegmentBase:
 
     def contains_row(self, row_id: int) -> bool:
         """Return whether this segment covers `row_id`."""
-        raise NotImplementedError("Question 2: implement SegmentBase.contains_row()")
+        return row_id >= self.start and row_id < self.start + self.count
 
 
 T = TypeVar("T", bound=SegmentBase)
@@ -49,16 +49,21 @@ class SegmentTree(Generic[T]):
 
     def append(self, node: T) -> None:
         """Register a new segment node."""
-        raise NotImplementedError("Question 2: implement SegmentTree.append()")
+        self.nodes.append(node)
 
     def locate_index(self, row_id: int) -> int:
         """Return the index of the node covering `row_id`."""
-        raise NotImplementedError("Question 2: implement SegmentTree.locate_index()")
+        # switch to binary search
+        for i, node in enumerate(self.nodes):
+            if node.contains_row(row_id):
+                return i
+        raise KeyError(f"{row_id} not found")
 
     def locate(self, row_id: int) -> T:
         """Return the node covering `row_id`."""
-        raise NotImplementedError("Question 2: implement SegmentTree.locate()")
+        idx = self.locate_index(row_id)
+        return self.nodes[idx]
 
     def row_ranges(self) -> list[tuple[int, int]]:
         """Return `(start, count)` for every segment."""
-        raise NotImplementedError("Question 2: implement SegmentTree.row_ranges()")
+        return [(seg.start, seg.count) for seg in self.nodes]
