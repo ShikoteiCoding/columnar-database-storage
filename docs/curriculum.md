@@ -91,6 +91,29 @@ Expose the catalog from `AttachedDatabase`, create schemas in `Catalog`, and att
 
 Implement ordered segment registration and binary-search row lookup.
 
+### Class diagram
+
+```mermaid
+classDiagram
+	class SegmentBase {
+		+start: int
+		+count: int
+		+contains_row(row_id: int) bool
+	}
+
+	class SegmentTree~T~ {
+		+supports_lazy_loading: bool
+		+nodes: list[T]
+		+finished_loading: bool
+		+append(node: T) None
+		+locate_index(row_id: int) int
+		+locate(row_id: int) T
+		+row_ranges() list[tuple[int, int]]
+	}
+
+	SegmentTree --> SegmentBase : stores ordered ranges
+```
+
 ### Goal
 Allow fast resolution from a row id to the owning row group or column segment.
 
