@@ -54,10 +54,21 @@ class SegmentTree(Generic[T]):
     def locate_index(self, row_id: int) -> int:
         """Return the index of the node covering `row_id`."""
         # switch to binary search
-        for i, node in enumerate(self.nodes):
-            if node.contains_row(row_id):
-                return i
-        raise KeyError(f"{row_id} not found")
+        left = 0
+        right = len(self.nodes) - 1
+
+        while left <= right:
+            mid = (left + right) // 2
+            node = self.nodes[mid]
+
+            if row_id < node.start:
+                right = mid - 1
+            elif row_id >= node.start + node.count:
+                left = mid + 1
+            else:
+                return mid
+
+        raise KeyError(f"`{row_id}` not found")
 
     def locate(self, row_id: int) -> T:
         """Return the node covering `row_id`."""
