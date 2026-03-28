@@ -49,6 +49,7 @@ class SegmentTreeQuestionTests(unittest.TestCase):
         for row_id in range(1024):
             tree.append(SegmentBase(start=row_id, count=1))
 
+        # Instrument the backing nodes to model how a large table should still find rows quickly.
         tracked_nodes = self.TrackingList(tree.nodes)
         tree.nodes = tracked_nodes
 
@@ -66,6 +67,7 @@ class SegmentTreeQuestionTests(unittest.TestCase):
         tree.append(first)
         tree.append(second)
 
+        # Query execution ultimately needs the segment itself, not just its position.
         self.assertIs(tree.locate(5), second)
 
     def test_row_ranges_returns_sorted_ranges(self) -> None:

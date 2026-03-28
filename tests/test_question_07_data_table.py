@@ -16,6 +16,7 @@ class DataTableQuestionTests(unittest.TestCase):
             ],
         )
         table = DataTable(definition, row_group_size=2)
+        # Appending past one batch boundary should create extra row groups automatically.
         table.append_rows([
             {"id": 1, "kind": "a"},
             {"id": 2, "kind": "b"},
@@ -43,6 +44,7 @@ class DataTableQuestionTests(unittest.TestCase):
             {"id": 4, "kind": "d"},
         ])
 
+        # Pagination should stay seamless even when the requested slice crosses group boundaries.
         rows = table.scan_rows(1, 3)
 
         self.assertEqual(rows, [

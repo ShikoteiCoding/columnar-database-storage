@@ -7,6 +7,7 @@ class MainDemoQuestionTests(unittest.TestCase):
     """Question 10: final integration demo."""
 
     def test_run_demo_returns_checkpoint_and_visible_rows(self) -> None:
+        # The demo should tell the full story an end user would see after running the program.
         payload = main.run_demo()
 
         self.assertEqual(payload["database"], "exercise_db")
