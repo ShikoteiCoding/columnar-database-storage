@@ -55,7 +55,7 @@ class SegmentTree(Generic[T]):
         """Return the index of the node covering `row_id`."""
         raise NotImplementedError("Question 2: implement SegmentTree.locate_index()")
 
-    def locate(self, row_id: int) -> T:
+    def locate(self, row_id: int) -> T | None:
         """Return the node covering `row_id`."""
         raise NotImplementedError("Question 2: implement SegmentTree.locate()")
 
