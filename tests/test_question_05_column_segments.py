@@ -7,6 +7,15 @@ from columnar_storage.storage import ColumnSegment
 class ColumnSegmentQuestionTests(unittest.TestCase):
     """Question 5: column segment behavior."""
 
+    def test_segment_keeps_column_metadata_for_later_storage_decisions(self) -> None:
+        segment = ColumnSegment(start=0, column_name="value", column_type=int, max_values=4)
+
+        # The segment already knows which logical column it belongs to, and keeping the
+        # declared type nearby makes later serialization and size heuristics easier to explain.
+        self.assertEqual(segment.column_name, "value")
+        self.assertIs(segment.column_type, int)
+        self.assertEqual(segment.max_values, 4)
+
     def test_append_updates_count_and_statistics(self) -> None:
         segment = ColumnSegment(start=0, column_name="value", max_values=4)
         segment.append([10, 20, None])
@@ -72,6 +81,8 @@ class ColumnSegmentQuestionTests(unittest.TestCase):
     def test_estimate_size_bytes_is_stable_for_empty_segment_and_non_decreasing_after_appends(self) -> None:
         segment = ColumnSegment(start=0, column_name="value", max_values=10)
 
+        # `estimate_size_bytes()` is not meant to be exact accounting. It is a planning heuristic
+        # for checkpoint code that needs to know whether a segment stays tiny or keeps growing.
         empty_size = segment.estimate_size_bytes()
         segment.append([1, 2])
         small_size = segment.estimate_size_bytes()

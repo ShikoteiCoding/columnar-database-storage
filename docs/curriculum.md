@@ -331,6 +331,7 @@ classDiagram
 
 	class ColumnSegment {
 		+column_name: str
+		+column_type: type | None
 		+start: int
 		+count: int
 		+values: list[Any]
@@ -346,10 +347,12 @@ classDiagram
 ```
 
 ### Goal
-Append values, estimate size, detect constant segments, and expose `DataPointer` metadata.
+Append values, keep lightweight column metadata, estimate serialized size, detect constant segments, and expose `DataPointer` metadata.
 
 ### Guidance
 - A segment should own one contiguous row range.
+- `estimate_size_bytes()` is only a heuristic for later checkpoint/block-allocation choices, not exact memory accounting.
+- Keeping the declared column type on the segment can make size estimation and serialization intent easier to understand.
 - Constant segments should be representable without allocating a data block.
 
 ### Files
