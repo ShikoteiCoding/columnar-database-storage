@@ -86,6 +86,8 @@ class ColumnSegment(SegmentBase):
 
     def append(self, values: list[Any]) -> None:
         """Append values into the segment."""
+        if len(values) + len(self.values) > self.max_values:
+            raise ValueError(f"Not able to append to column segment")
         self.statistics.update(values)
         self.values.extend(values)
         self.count += len(values)
@@ -96,7 +98,23 @@ class ColumnSegment(SegmentBase):
 
     def estimate_size_bytes(self) -> int:
         """Return an estimated payload size for persistence decisions."""
-        raise NotImplementedError("Question 5: implement ColumnSegment.estimate_size_bytes()")
+        if self.count == 0:
+            return 0
+
+        # Constant segments are cheap to persist as metadata only.
+        if self.statistics.is_constant():
+            value = self.statistics.constant_value
+            if value is None:
+                return 1
+            if isinstance(value, bool):
+                return 1
+            if isinstance(value, int | float):
+                return 8
+            if isinstance(value, str):
+                return len(value.encode("utf-8"))
+            return len(str(value).encode("utf-8"))
+        
+        return 1
 
     def scan(self, local_offset: int = 0, count: int | None = None) -> list[Any]:
         """Read a slice of values from the segment."""
