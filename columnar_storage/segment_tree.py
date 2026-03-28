@@ -74,7 +74,7 @@ class SegmentTree(Generic[T]):
         """Return the node covering `row_id`."""
         idx = self.locate_index(row_id)
         if idx == -1:
-            return
+            return None
         return self.nodes[idx]
 
     def row_ranges(self) -> list[tuple[int, int]]:
