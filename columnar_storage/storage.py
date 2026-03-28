@@ -86,7 +86,8 @@ class ColumnSegment(SegmentBase):
 
     def append(self, values: list[Any]) -> None:
         """Append values into the segment."""
-        raise NotImplementedError("Question 5: implement ColumnSegment.append()")
+        self.statistics.update(values)
+        self.values.extend(values)
 
     def is_full(self) -> bool:
         """Return whether the segment reached its logical capacity."""
