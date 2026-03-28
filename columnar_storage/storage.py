@@ -7,6 +7,7 @@ This module mirrors the educational hierarchy:
 
 from __future__ import annotations
 
+from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -201,11 +202,20 @@ class ColumnData:
 
     def append(self, values: list[Any]) -> None:
         """Append a batch of values for this column."""
-        raise NotImplementedError("Question 6: implement ColumnData.append()")
+        segment = ColumnSegment(
+            # not sure at all here, i don't know where is row_id is tracked
+            # should I use self.row_group_start ?
+            0, 
+            self.definition.name,
+            column_type=self.definition.python_type
+        )
+        self.segment_tree.append(segment)
 
     def scan(self, row_start: int, count: int) -> list[Any]:
         """Return values for the requested absolute row range."""
-        raise NotImplementedError("Question 6: implement ColumnData.scan()")
+        start = self.segment_tree.locate_index(row_start)
+        end = self.segment_tree.locate_index(row_start + count)
+        pass
 
     def checkpoint(self, block_manager: BlockManager, partial_blocks: PartialBlockManager) -> list[DataPointer]:
         """Persist segments and return metadata pointers."""
@@ -248,11 +258,21 @@ class RowGroup(SegmentBase):
 
     def append_rows(self, rows: list[dict[str, Any]]) -> None:
         """Append row dictionaries into the row group."""
-        raise NotImplementedError("Question 6: implement RowGroup.append_rows()")
+        self.count += len(rows)
+        col_to_list = defaultdict(list)
+
+        # pivot as columns
+        for row in rows:
+            for col_name, value in row.items():
+                col_to_list[col_name].append(value)
+
+        for col_name, values in col_to_list.items():
+            self.columns[col_name].append(values)
+
 
     def is_full(self) -> bool:
         """Return whether the row group reached capacity."""
-        raise NotImplementedError("Question 6: implement RowGroup.is_full()")
+        return self.count == self.max_rows
 
     def scan_rows(self, row_start: int, count: int) -> list[dict[str, Any]]:
         """Reconstruct rows from columnar storage."""
