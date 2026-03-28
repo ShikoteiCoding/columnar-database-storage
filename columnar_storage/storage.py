@@ -58,11 +58,11 @@ class VersionInfo:
 
     def mark_deleted(self, row_id: int) -> None:
         """Mark one absolute row id as deleted."""
-        raise NotImplementedError("Question 6: implement VersionInfo.mark_deleted()")
+        self.deleted_row_ids.add(row_id)
 
     def is_deleted(self, row_id: int) -> bool:
         """Return whether the row id is deleted."""
-        raise NotImplementedError("Question 6: implement VersionInfo.is_deleted()")
+        return row_id in self.deleted_row_ids
 
     def serialize(self) -> dict[str, Any]:
         """Serialize delete metadata."""
@@ -171,7 +171,7 @@ class ColumnSegment(SegmentBase):
         """Read a slice of values from the segment."""
         if not count:
             return self.values[local_offset:]
-        return self.values[local_offset:local_offset+count]
+        return self.values[local_offset:local_offset + count]
 
     def to_pointer(self, block_pointer: BlockPointer) -> DataPointer:
         """Create a `DataPointer` for this segment."""
@@ -202,20 +202,39 @@ class ColumnData:
 
     def append(self, values: list[Any]) -> None:
         """Append a batch of values for this column."""
-        segment = ColumnSegment(
-            # not sure at all here, i don't know where is row_id is tracked
-            # should I use self.row_group_start ?
-            0, 
-            self.definition.name,
-            column_type=self.definition.python_type
-        )
-        self.segment_tree.append(segment)
+
+        for i in range(0, len(values), self.segment_size):
+            last = self.segment_tree.nodes[-1] if self.segment_tree.nodes else None
+            segment = ColumnSegment(
+                # not sure at all here, i don't know where is row_id is tracked
+                # should I use self.row_group_start ?
+                0 if not last else last.start + last.count,
+                self.definition.name,
+                self.segment_size,
+                self.definition.python_type
+            )
+            segment.append(values[i:i+self.segment_size])
+            self.segment_tree.append(segment)
 
     def scan(self, row_start: int, count: int) -> list[Any]:
         """Return values for the requested absolute row range."""
-        start = self.segment_tree.locate_index(row_start)
-        end = self.segment_tree.locate_index(row_start + count)
-        pass
+        idx = row_start
+        left = count
+        data = []
+        
+        while len(data) < count:
+            column_segment = self.segment_tree.locate(idx)
+            if not column_segment:
+                return data
+            
+            # offset value from segment start (idx is segment tree level)
+            segment_data = column_segment.scan(idx - column_segment.start, left)
+            data.extend(segment_data)
+            left = count - len(data)
+            idx += len(segment_data)
+
+        return data
+
 
     def checkpoint(self, block_manager: BlockManager, partial_blocks: PartialBlockManager) -> list[DataPointer]:
         """Persist segments and return metadata pointers."""
@@ -258,16 +277,30 @@ class RowGroup(SegmentBase):
 
     def append_rows(self, rows: list[dict[str, Any]]) -> None:
         """Append row dictionaries into the row group."""
-        self.count += len(rows)
+        if len(rows) + self.count > self.max_rows:
+            raise ValueError(f"RowGroup overflow")
+        
         col_to_list = defaultdict(list)
+
+        column_names = set([col_def.name for col_def in self.definition.columns])
+        nullable_columns = set([col_def.name for col_def in self.definition.columns if col_def.nullable is True])
 
         # pivot as columns
         for row in rows:
+            cols_in_row = set(list(row.keys()))
+
+            if cols_in_row != column_names:
+                raise ValueError(f"RowGroup received invalid value schemas: {cols_in_row}")
+
             for col_name, value in row.items():
+                if value is None and col_name not in nullable_columns:
+                    raise ValueError(f"RowGroup received null value on non nullable field: {col_name}")
                 col_to_list[col_name].append(value)
 
         for col_name, values in col_to_list.items():
             self.columns[col_name].append(values)
+
+        self.count += len(rows)
 
 
     def is_full(self) -> bool:
@@ -276,11 +309,23 @@ class RowGroup(SegmentBase):
 
     def scan_rows(self, row_start: int, count: int) -> list[dict[str, Any]]:
         """Reconstruct rows from columnar storage."""
-        raise NotImplementedError("Question 6: implement RowGroup.scan_rows()")
+        data = []
+        col_to_list = defaultdict(list)
+        min_size = count
+
+        for col_name, column_data in self.columns.items():
+            column_data_values = column_data.scan(row_start, count)
+            col_to_list[col_name] = column_data_values
+            min_size = min(min_size, len(column_data_values))
+        
+        for i in range(min_size):
+            data.append({col: val[i] for col, val in col_to_list.items()})
+        
+        return data
 
     def delete_row(self, row_id: int) -> None:
         """Mark one absolute row id as deleted."""
-        raise NotImplementedError("Question 6: implement RowGroup.delete_row()")
+        self.version_info.mark_deleted(row_id)
 
     def checkpoint(self, block_manager: BlockManager, partial_blocks: PartialBlockManager) -> RowGroupPointer:
         """Checkpoint this row group into row-group metadata."""
