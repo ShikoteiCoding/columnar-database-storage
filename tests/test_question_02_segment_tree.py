@@ -77,12 +77,17 @@ class SegmentTreeQuestionTests(unittest.TestCase):
 
         self.assertEqual(tree.row_ranges(), [(0, 4), (4, 3)])
 
-    def test_missing_row_raises_key_error(self) -> None:
+    def test_missing_row_returns_minus_one(self) -> None:
         tree = SegmentTree()
         tree.append(SegmentBase(start=0, count=2))
 
-        with self.assertRaises(KeyError):
-            tree.locate_index(4)
+        self.assertEqual(tree.locate_index(4), -1)
+
+    def test_locate_returns_none_for_missing_row(self) -> None:
+        tree = SegmentTree()
+        tree.append(SegmentBase(start=0, count=2))
+
+        self.assertIsNone(tree.locate(4))
 
 
 if __name__ == "__main__":

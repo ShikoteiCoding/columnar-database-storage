@@ -70,7 +70,7 @@ class SegmentTree(Generic[T]):
 
         raise KeyError(f"`{row_id}` not found")
 
-    def locate(self, row_id: int) -> T:
+    def locate(self, row_id: int) -> T | None:
         """Return the node covering `row_id`."""
         idx = self.locate_index(row_id)
         return self.nodes[idx]
