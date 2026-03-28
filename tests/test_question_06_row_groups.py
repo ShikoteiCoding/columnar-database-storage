@@ -36,6 +36,7 @@ class RowGroupQuestionTests(unittest.TestCase):
             {"id": 3, "kind": "buy", "value": 30},
         ])
 
+        # Query results must be rebuilt into row-shaped records even though storage is columnar.
         rows = row_group.scan_rows(1, 2)
 
         self.assertEqual(rows, [
@@ -50,6 +51,7 @@ class RowGroupQuestionTests(unittest.TestCase):
             {"id": 2, "kind": "view", "value": None},
             {"id": 3, "kind": "buy", "value": 30},
         ])
+        # Deletes stay logical so later reads skip tombstoned rows without reshuffling storage.
         row_group.delete_row(1)
 
         rows = row_group.scan_rows(0, 3)

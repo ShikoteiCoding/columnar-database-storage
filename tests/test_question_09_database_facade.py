@@ -9,6 +9,7 @@ class DatabaseFacadeQuestionTests(unittest.TestCase):
 
     def test_create_table_insert_scan_and_checkpoint(self) -> None:
         engine = MiniDatabaseEngine("exercise_db")
+        # This mirrors the lifecycle an application uses through the public database API.
         engine.create_schema("analytics")
         engine.create_table(
             "analytics",
@@ -28,6 +29,7 @@ class DatabaseFacadeQuestionTests(unittest.TestCase):
             ],
         )
 
+        # Reads and checkpoints should compose cleanly because both happen in normal request flows.
         rows = engine.scan_rows("analytics", "events", 1, 2)
         checkpoint = engine.checkpoint_table("analytics", "events")
 
