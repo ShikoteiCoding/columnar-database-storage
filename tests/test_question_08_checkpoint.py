@@ -32,6 +32,7 @@ class CheckpointQuestionTests(unittest.TestCase):
             {"id": 2, "kind": "b", "value": None},
             {"id": 3, "kind": "c", "value": 30},
         ])
+        # Tombstones must be captured too so recovery does not resurrect deleted rows.
         table.row_groups.row_groups.nodes[0].delete_row(1)
 
         payload = table.checkpoint()
@@ -47,6 +48,7 @@ class CheckpointQuestionTests(unittest.TestCase):
         writer = MetadataWriter()
         table_writer = SingleFileTableDataWriter(writer)
 
+        # The catalog keeps one pointer to the table metadata blob rather than inlining everything.
         payload = table_writer.finalize_table(
             table_name="events",
             table_statistics={"row_count": 3},
