@@ -206,9 +206,7 @@ class ColumnData:
         for i in range(0, len(values), self.segment_size):
             last = self.segment_tree.nodes[-1] if self.segment_tree.nodes else None
             segment = ColumnSegment(
-                # not sure at all here, i don't know where is row_id is tracked
-                # should I use self.row_group_start ?
-                0 if not last else last.start + last.count,
+                self.row_group_start if not last else last.start + last.count,
                 self.definition.name,
                 self.segment_size,
                 self.definition.python_type
@@ -311,20 +309,27 @@ class RowGroup(SegmentBase):
         """Reconstruct rows from columnar storage."""
         data = []
         col_to_list = defaultdict(list)
-        min_size = count
+
+        if not self.contains_row(row_start):
+            return []
 
         for col_name, column_data in self.columns.items():
             column_data_values = column_data.scan(row_start, count)
             col_to_list[col_name] = column_data_values
-            min_size = min(min_size, len(column_data_values))
         
-        for i in range(min_size):
-            data.append({col: val[i] for col, val in col_to_list.items()})
+        for idx in range(count):
+            if row_start + idx >= self.start + self.count:
+                break
+
+            if row_start + idx not in self.version_info.deleted_row_ids:
+                data.append({col: val[idx] for col, val in col_to_list.items()})
         
         return data
 
     def delete_row(self, row_id: int) -> None:
         """Mark one absolute row id as deleted."""
+        if not self.contains_row(row_id):
+            raise KeyError(row_id)
         self.version_info.mark_deleted(row_id)
 
     def checkpoint(self, block_manager: BlockManager, partial_blocks: PartialBlockManager) -> RowGroupPointer:

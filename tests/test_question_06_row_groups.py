@@ -146,52 +146,52 @@ class RowGroupQuestionTests(unittest.TestCase):
             {"id": 5, "kind": "refund", "value": 50},
         ])
 
-    # def test_delete_row_hides_it_from_scans(self) -> None:
-    #     row_group = RowGroup(self.definition, start=0, max_rows=10)
-    #     row_group.append_rows([
-    #         {"id": 1, "kind": "click", "value": 10},
-    #         {"id": 2, "kind": "view", "value": None},
-    #         {"id": 3, "kind": "buy", "value": 30},
-    #     ])
-    #     # Deletes stay logical so later reads skip tombstoned rows without reshuffling storage.
-    #     row_group.delete_row(1)
+    def test_delete_row_hides_it_from_scans(self) -> None:
+        row_group = RowGroup(self.definition, start=0, max_rows=10)
+        row_group.append_rows([
+            {"id": 1, "kind": "click", "value": 10},
+            {"id": 2, "kind": "view", "value": None},
+            {"id": 3, "kind": "buy", "value": 30},
+        ])
+        # Deletes stay logical so later reads skip tombstoned rows without reshuffling storage.
+        row_group.delete_row(1)
 
-    #     rows = row_group.scan_rows(0, 3)
+        rows = row_group.scan_rows(0, 3)
 
-    #     self.assertEqual(rows, [
-    #         {"id": 1, "kind": "click", "value": 10},
-    #         {"id": 3, "kind": "buy", "value": 30},
-    #     ])
+        self.assertEqual(rows, [
+            {"id": 1, "kind": "click", "value": 10},
+            {"id": 3, "kind": "buy", "value": 30},
+        ])
 
-    # def test_delete_row_is_idempotent_for_repeated_logical_deletes(self) -> None:
-    #     row_group = RowGroup(self.definition, start=0, max_rows=10)
-    #     row_group.append_rows([
-    #         {"id": 1, "kind": "click", "value": 10},
-    #         {"id": 2, "kind": "view", "value": None},
-    #         {"id": 3, "kind": "buy", "value": 30},
-    #     ])
+    def test_delete_row_is_idempotent_for_repeated_logical_deletes(self) -> None:
+        row_group = RowGroup(self.definition, start=0, max_rows=10)
+        row_group.append_rows([
+            {"id": 1, "kind": "click", "value": 10},
+            {"id": 2, "kind": "view", "value": None},
+            {"id": 3, "kind": "buy", "value": 30},
+        ])
 
-    #     row_group.delete_row(1)
-    #     row_group.delete_row(1)
+        row_group.delete_row(1)
+        row_group.delete_row(1)
 
-    #     self.assertEqual(row_group.version_info.deleted_row_ids, {1})
-    #     self.assertEqual(row_group.scan_rows(0, 3), [
-    #         {"id": 1, "kind": "click", "value": 10},
-    #         {"id": 3, "kind": "buy", "value": 30},
-    #     ])
+        self.assertEqual(row_group.version_info.deleted_row_ids, {1})
+        self.assertEqual(row_group.scan_rows(0, 3), [
+            {"id": 1, "kind": "click", "value": 10},
+            {"id": 3, "kind": "buy", "value": 30},
+        ])
 
-    # def test_delete_row_rejects_out_of_range_absolute_row_ids(self) -> None:
-    #     row_group = RowGroup(self.definition, start=10, max_rows=10)
-    #     row_group.append_rows([
-    #         {"id": 1, "kind": "click", "value": 10},
-    #         {"id": 2, "kind": "view", "value": None},
-    #     ])
+    def test_delete_row_rejects_out_of_range_absolute_row_ids(self) -> None:
+        row_group = RowGroup(self.definition, start=10, max_rows=10)
+        row_group.append_rows([
+            {"id": 1, "kind": "click", "value": 10},
+            {"id": 2, "kind": "view", "value": None},
+        ])
 
-    #     with self.assertRaises(KeyError):
-    #         row_group.delete_row(9)
+        with self.assertRaises(KeyError):
+            row_group.delete_row(9)
 
-    #     with self.assertRaises(KeyError):
-    #         row_group.delete_row(12)
+        with self.assertRaises(KeyError):
+            row_group.delete_row(12)
 
 
 if __name__ == "__main__":
