@@ -88,10 +88,11 @@ class ColumnSegment(SegmentBase):
         """Append values into the segment."""
         self.statistics.update(values)
         self.values.extend(values)
+        self.count += len(values)
 
     def is_full(self) -> bool:
         """Return whether the segment reached its logical capacity."""
-        raise NotImplementedError("Question 5: implement ColumnSegment.is_full()")
+        return len(self.values) == self.max_values
 
     def estimate_size_bytes(self) -> int:
         """Return an estimated payload size for persistence decisions."""
@@ -99,11 +100,19 @@ class ColumnSegment(SegmentBase):
 
     def scan(self, local_offset: int = 0, count: int | None = None) -> list[Any]:
         """Read a slice of values from the segment."""
-        raise NotImplementedError("Question 5: implement ColumnSegment.scan()")
+        if not count:
+            return self.values[local_offset:]
+        return self.values[local_offset:local_offset+count]
 
-    def to_pointer(self, block_pointer: BlockPointer | None = None) -> DataPointer:
+    def to_pointer(self, block_pointer: BlockPointer) -> DataPointer:
         """Create a `DataPointer` for this segment."""
-        raise NotImplementedError("Question 5: implement ColumnSegment.to_pointer()")
+        return DataPointer(
+            self.start,
+            self.count,
+            block_pointer,
+            self.statistics,
+            constant_value=self.statistics.constant_value
+        )
 
 
 class ColumnData:
