@@ -48,20 +48,28 @@ class DataBlock:
     def __init__(self, block_id: int, capacity: int = BLOCK_SIZE) -> None:
         self.block_id = block_id
         self.capacity = capacity
-        self.data = bytearray(capacity)
+        self.data = bytearray(capacity) # pre allocated data "empty"
         self.used = 0
 
     def remaining_capacity(self) -> int:
         """Return remaining capacity in bytes."""
-        raise NotImplementedError("Question 4: implement DataBlock.remaining_capacity()")
+        return self.capacity - self.used
 
     def write(self, payload: bytes) -> int:
         """Write bytes and return the starting offset."""
-        raise NotImplementedError("Question 4: implement DataBlock.write()")
+        prev_offset = self.used
+        size = len(payload)
+        
+        if size > self.remaining_capacity():
+            raise ValueError(f"Block is full")
+
+        self.data[prev_offset: prev_offset + size] = payload
+        self.used += len(payload)
+        return prev_offset
 
     def read(self, offset: int, size: int) -> bytes:
         """Read `size` bytes from `offset`."""
-        raise NotImplementedError("Question 4: implement DataBlock.read()")
+        return self.data[offset:offset+size]
 
 
 class BlockManager:
@@ -80,15 +88,18 @@ class BlockManager:
 
     def allocate_block(self) -> DataBlock:
         """Allocate and return a new `DataBlock`."""
-        raise NotImplementedError("Question 4: implement BlockManager.allocate_block()")
+        new_data_block = DataBlock(self._next_block_id)
+        self.blocks[self._next_block_id] = new_data_block
+        self._next_block_id += 1
+        return new_data_block
 
     def get_block(self, block_id: int) -> DataBlock:
         """Return a block by id."""
-        raise NotImplementedError("Question 4: implement BlockManager.get_block()")
+        return self.blocks[block_id]
 
     def mark_block_as_modified(self, block_id: int) -> None:
         """Track a block as modified or reclaimable."""
-        raise NotImplementedError("Question 4: implement BlockManager.mark_block_as_modified()")
+        self.modified_blocks.add(block_id)
 
 
 @dataclass
@@ -114,8 +125,15 @@ class PartialBlockManager:
 
     def allocate(self, payload_size: int) -> PartialBlockAllocation:
         """Return a block allocation that can fit `payload_size` bytes."""
-        raise NotImplementedError("Question 4: implement PartialBlockManager.allocate()")
+        for block in self.partial_blocks:
+            if block.remaining_capacity() >= payload_size:
+                block_pointer = BlockPointer(block.block_id, block.used)
+                return PartialBlockAllocation(block_pointer, block)
+        
+        new_block = self.block_manager.allocate_block()
+        new_block_pointer = BlockPointer(new_block.block_id, new_block.used)
+        return PartialBlockAllocation(new_block_pointer, new_block)
 
     def register_block(self, block: DataBlock) -> None:
         """Register a block for future partial reuse."""
-        raise NotImplementedError("Question 4: implement PartialBlockManager.register_block()")
+        self.partial_blocks.append(block)
