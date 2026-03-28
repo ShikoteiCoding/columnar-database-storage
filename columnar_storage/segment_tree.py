@@ -68,11 +68,13 @@ class SegmentTree(Generic[T]):
             else:
                 return mid
 
-        raise KeyError(f"`{row_id}` not found")
+        return -1
 
     def locate(self, row_id: int) -> T | None:
         """Return the node covering `row_id`."""
         idx = self.locate_index(row_id)
+        if idx == -1:
+            return None
         return self.nodes[idx]
 
     def row_ranges(self) -> list[tuple[int, int]]:
