@@ -35,12 +35,12 @@ class DataPointer:
 
     def serialize(self) -> dict[str, Any]:
         """Serialize the data pointer."""
-        raise NotImplementedError("Question 3: implement DataPointer.serialize()")
+        return self.__dict__
 
     @classmethod
-    def deserialize(cls, payload: dict[str, Any]) -> "DataPointer":
+    def deserialize(cls, payload: dict[str, Any]) -> DataPointer:
         """Deserialize the data pointer."""
-        raise NotImplementedError("Question 3: implement DataPointer.deserialize()")
+        return DataPointer(**payload)
 
 
 class VersionInfo:
@@ -73,13 +73,22 @@ class ColumnSegment(SegmentBase):
 
     Goal for the candidate:
     - append values into the segment
+    - retain lightweight column metadata such as the declared Python type
     - keep statistics up to date
-    - estimate storage size and build `DataPointer` metadata
+    - estimate how large the serialized payload would be before allocating a block
+    - build `DataPointer` metadata
     """
 
-    def __init__(self, start: int, column_name: str, max_values: int = 2048) -> None:
+    def __init__(
+        self,
+        start: int,
+        column_name: str,
+        max_values: int = 2048,
+        column_type: type | None = None,
+    ) -> None:
         super().__init__(start=start, count=0)
         self.column_name = column_name
+        self.column_type = column_type
         self.max_values = max_values
         self.values: list[Any] = []
         self.statistics = BaseStatistics()
@@ -93,7 +102,12 @@ class ColumnSegment(SegmentBase):
         raise NotImplementedError("Question 5: implement ColumnSegment.is_full()")
 
     def estimate_size_bytes(self) -> int:
-        """Return an estimated payload size for persistence decisions."""
+        """Return a rough serialized payload size for checkpoint planning.
+
+        The estimate does not need to be exact. It exists so later checkpoint code
+        can decide whether a segment is tiny, whether it should be packed into a
+        partial block, or whether constant-segment metadata alone is sufficient.
+        """
         raise NotImplementedError("Question 5: implement ColumnSegment.estimate_size_bytes()")
 
     def scan(self, local_offset: int = 0, count: int | None = None) -> list[Any]:

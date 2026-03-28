@@ -69,13 +69,19 @@ class Schema:
         self.name = name
         self.tables: dict[str, DuckTableEntry] = {}
 
-    def create_table(self, definition: TableDefinition, data_table: Any) -> DuckTableEntry:
+    def create_table(self, definition: TableDefinition, data_table: Any) -> DuckTableEntry | ValueError:
         """Create and register a `DuckTableEntry` inside this schema."""
-        raise NotImplementedError("Question 1: implement Schema.create_table()")
+        if not definition.name in self.tables:
+            table_entry = DuckTableEntry(definition, data_table)
+            self.tables[definition.name] = table_entry
+            return table_entry
+        
+        raise ValueError(f"Table already exist: {definition.name}")
 
-    def get_table(self, table_name: str) -> DuckTableEntry:
+    def get_table(self, table_name: str) -> DuckTableEntry | None:
         """Return a table entry by name."""
-        raise NotImplementedError("Question 1: implement Schema.get_table()")
+        return self.tables.get(table_name)
+        
 
 
 class Catalog:
@@ -92,11 +98,17 @@ class Catalog:
 
     def create_schema(self, schema_name: str) -> Schema:
         """Create a schema and return it."""
-        raise NotImplementedError("Question 1: implement Catalog.create_schema()")
+        if schema_name not in self.schemas:
+            schema = Schema(schema_name)
+            self.schemas[schema_name] = schema
+            return schema
+        return self.schemas[schema_name]
+        
 
-    def get_schema(self, schema_name: str) -> Schema:
+    def get_schema(self, schema_name: str) -> Schema | None:
         """Return a previously created schema."""
-        raise NotImplementedError("Question 1: implement Catalog.get_schema()")
+        return self.schemas.get(schema_name)
+        
 
 
 class AttachedDatabase:
