@@ -16,7 +16,9 @@ class CatalogQuestionTests(unittest.TestCase):
     def test_database_exposes_catalog_that_creates_and_returns_schema(self) -> None:
         database = AttachedDatabase("demo")
         catalog = database.get_catalog()
+        # A new workload usually creates its schema before any tables are registered.
         created = catalog.create_schema("analytics")
+        # Later requests resolve that same schema by name rather than carrying the object around.
         looked_up = catalog.get_schema("analytics")
 
         self.assertIs(database.get_catalog(), catalog)
@@ -32,6 +34,7 @@ class CatalogQuestionTests(unittest.TestCase):
         )
         table = DataTable(definition, row_group_size=4)
 
+        # The schema keeps the catalog-facing handle that points to the physical table storage.
         entry = schema.create_table(definition, table)
         looked_up = schema.get_table("events")
 
@@ -50,6 +53,7 @@ class CatalogQuestionTests(unittest.TestCase):
         table = DataTable(definition, row_group_size=4)
         schema.create_table(definition, table)
 
+        # A repeated create should fail like a migration colliding with an existing production table.
         with self.assertRaises(ValueError):
             schema.create_table(definition, table)
 

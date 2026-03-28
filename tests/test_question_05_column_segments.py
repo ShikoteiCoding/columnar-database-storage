@@ -32,6 +32,7 @@ class ColumnSegmentQuestionTests(unittest.TestCase):
         segment = ColumnSegment(start=20, column_name="value", max_values=10)
         segment.append([5, 6, 7])
 
+        # Checkpoint turns an in-memory segment into a durable address plus summary metadata.
         pointer = segment.to_pointer(BlockPointer(block_id=9, offset=12))
 
         self.assertEqual(pointer.row_start, 20)
@@ -42,6 +43,7 @@ class ColumnSegmentQuestionTests(unittest.TestCase):
         segment = ColumnSegment(start=0, column_name="value", max_values=10)
         segment.append([7, 7, 7])
 
+        # Constant runs can be restored from metadata without paying to store duplicate values.
         pointer = segment.to_pointer(BlockPointer(block_id=None, offset=0))
 
         self.assertEqual(pointer.constant_value, 7)

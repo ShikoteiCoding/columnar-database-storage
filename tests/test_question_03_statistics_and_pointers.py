@@ -25,6 +25,7 @@ class StatisticsAndPointersQuestionTests(unittest.TestCase):
         self.assertTrue(stats.is_constant())
         self.assertEqual(stats.constant_value, 4)
 
+        # A later append batch can widen the range and break the constant-segment optimization.
         stats.update([None, 2, 8])
 
         self.assertEqual(stats.min_value, 2)
@@ -53,6 +54,7 @@ class StatisticsAndPointersQuestionTests(unittest.TestCase):
         stats = BaseStatistics()
         stats.update([7, 7, 7])
 
+        # Checkpointing must preserve enough metadata to rebuild the same compression choice.
         restored = BaseStatistics.deserialize(stats.serialize())
 
         self.assertEqual(restored.min_value, 7)
@@ -68,6 +70,7 @@ class StatisticsAndPointersQuestionTests(unittest.TestCase):
         left.update([1, 2, None])
         right.update([5, 9])
 
+        # Adjacent segment summaries merge when the engine rolls them up for a table-level view.
         left.merge(right)
 
         self.assertEqual(left.min_value, 1)
@@ -81,6 +84,7 @@ class StatisticsAndPointersQuestionTests(unittest.TestCase):
         left.update([7, 7])
         right.update([7, 9])
 
+        # Combining partitions with different values should disable constant-only assumptions.
         left.merge(right)
 
         self.assertEqual(left.min_value, 7)
@@ -91,6 +95,7 @@ class StatisticsAndPointersQuestionTests(unittest.TestCase):
     def test_block_pointer_round_trip(self) -> None:
         pointer = BlockPointer(block_id=11, offset=128)
 
+        # Storage metadata should survive a save/load cycle without losing its byte address.
         restored = BlockPointer.deserialize(pointer.serialize())
 
         self.assertEqual(restored, pointer)
@@ -106,6 +111,7 @@ class StatisticsAndPointersQuestionTests(unittest.TestCase):
             compression_type="uncompressed",
         )
 
+        # A persisted segment descriptor must restore both location and pruning statistics.
         restored = DataPointer.deserialize(pointer.serialize())
 
         self.assertEqual(restored.row_start, 20)
@@ -125,6 +131,7 @@ class StatisticsAndPointersQuestionTests(unittest.TestCase):
             constant_value=7,
         )
 
+        # Constant segments can be reconstructed from metadata alone without reading a data block.
         restored = DataPointer.deserialize(pointer.serialize())
 
         self.assertIsNone(restored.block_pointer.block_id)
