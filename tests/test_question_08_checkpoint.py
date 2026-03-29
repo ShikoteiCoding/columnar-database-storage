@@ -98,7 +98,6 @@ class CheckpointQuestionTests(unittest.TestCase):
         partial_blocks = PartialBlockManager(block_manager)
 
         pointer = row_group.checkpoint(block_manager, partial_blocks)
-        print(type(pointer.data_pointers[0]), type(pointer.data_pointers[0][0]))
         block_ids = {
             data_pointer["block_pointer"]["block_id"]
             for data_pointer in pointer.data_pointers[0]
@@ -128,35 +127,35 @@ class CheckpointQuestionTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             row_group.checkpoint(block_manager, partial_blocks)
 
-    # def test_single_file_table_writer_builds_catalog_facing_payload(self) -> None:
-    #     writer = MetadataWriter()
-    #     table_writer = SingleFileTableDataWriter(writer)
+    def test_single_file_table_writer_builds_catalog_facing_payload(self) -> None:
+        writer = MetadataWriter()
+        table_writer = SingleFileTableDataWriter(writer)
 
-    #     # The catalog keeps one pointer to the table metadata blob rather than inlining everything.
-    #     payload = table_writer.finalize_table(
-    #         table_name="events",
-    #         table_statistics={"row_count": 3},
-    #         row_group_pointers=[],
-    #     )
+        # The catalog keeps one pointer to the table metadata blob rather than inlining everything.
+        payload = table_writer.finalize_table(
+            table_name="events",
+            table_statistics={"row_count": 3},
+            row_group_pointers=[],
+        )
+        
+        self.assertEqual(payload["table_name"], "events")
+        self.assertEqual(payload["table_pointer"], {"index": 0})
+        self.assertEqual(payload["total_rows"], 0)
+        self.assertEqual(writer.read_payload({"index": 0})["table_statistics"], {"row_count": 3})
 
-    #     self.assertEqual(payload["table_name"], "events")
-    #     self.assertEqual(payload["table_pointer"], {"index": 0})
-    #     self.assertEqual(payload["total_rows"], 0)
-    #     self.assertEqual(writer.read_payload({"index": 0})["table_statistics"], {"row_count": 3})
+    def test_single_file_table_writer_rejects_overlapping_row_group_ranges(self) -> None:
+        writer = MetadataWriter()
+        table_writer = SingleFileTableDataWriter(writer)
 
-    # def test_single_file_table_writer_rejects_overlapping_row_group_ranges(self) -> None:
-    #     writer = MetadataWriter()
-    #     table_writer = SingleFileTableDataWriter(writer)
-
-    #     with self.assertRaises(ValueError):
-    #         table_writer.finalize_table(
-    #             table_name="events",
-    #             table_statistics={"row_count": 4},
-    #             row_group_pointers=[
-    #                 RowGroupPointer(row_start=0, tuple_count=2),
-    #                 RowGroupPointer(row_start=1, tuple_count=2),
-    #             ],
-    #         )
+        with self.assertRaises(ValueError):
+            table_writer.finalize_table(
+                table_name="events",
+                table_statistics={"row_count": 4},
+                row_group_pointers=[
+                    RowGroupPointer(row_start=0, tuple_count=2),
+                    RowGroupPointer(row_start=1, tuple_count=2),
+                ],
+            )
 
 
 if __name__ == "__main__":

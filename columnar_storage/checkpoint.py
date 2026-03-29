@@ -66,7 +66,7 @@ class MetadataWriter:
     def read_payload(self, pointer: dict[str, int]) -> dict[str, Any]:
         """Read a payload by pointer."""
         index = pointer["index"]
-        if index > len(self.payloads):
+        if index < 0 or index >= len(self.payloads):
             raise IndexError(f"pointer '{pointer}' out of range")
         return self.payloads[pointer["index"]]
 
@@ -83,6 +83,19 @@ class SingleFileTableDataWriter:
     def __init__(self, metadata_writer: MetadataWriter) -> None:
         self.metadata_writer = metadata_writer
 
+    def _validate_row_group_pointers(self, row_group_pointers: list[RowGroupPointer]) -> None:
+        """Reject overlapping logical row ranges before writing table metadata."""
+        if not row_group_pointers:
+            return
+
+        ordered_pointers = sorted(row_group_pointers, key=lambda pointer: pointer.row_start)
+        previous_end = ordered_pointers[0].row_start + ordered_pointers[0].tuple_count
+
+        for pointer in ordered_pointers[1:]:
+            if pointer.row_start < previous_end:
+                raise ValueError("row group pointers must not overlap")
+            previous_end = pointer.row_start + pointer.tuple_count
+
     def finalize_table(
         self,
         *,
@@ -91,9 +104,18 @@ class SingleFileTableDataWriter:
         row_group_pointers: list[RowGroupPointer],
     ) -> dict[str, Any]:
         """Build the final table metadata payload."""
-        
+
+        self._validate_row_group_pointers(row_group_pointers)
+
+        table_pointer = self.metadata_writer.write_payload(
+            {
+                "table_statistics": table_statistics,
+                "row_groups": [pointer.serialize() for pointer in row_group_pointers],
+            }
+        )
+
         return {
             "table_name": table_name,
-            **table_statistics,
-            "table_pointer": self.metadata_writer.write_payload({"row_groups": [pointer.serialize() for pointer in row_group_pointers]})
+            "total_rows": sum(pointer.tuple_count for pointer in row_group_pointers),
+            "table_pointer": table_pointer,
         }
