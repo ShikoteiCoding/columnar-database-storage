@@ -55,8 +55,20 @@ class DataBlock:
         """Return remaining capacity in bytes."""
         raise NotImplementedError("Question 4: implement DataBlock.remaining_capacity()")
 
+    def reserve(self, size: int) -> int:
+        """Reserve `size` bytes and return the starting offset.
+
+        This exists for checkpoint flows that need a durable byte range before
+        materializing the payload itself.
+        """
+        raise NotImplementedError("Question 4: implement DataBlock.reserve()")
+
     def write(self, payload: bytes) -> int:
-        """Write bytes and return the starting offset."""
+        """Write bytes and return the starting offset.
+
+        The final implementation should delegate the capacity accounting to
+        `reserve()` and then copy the payload into the reserved range.
+        """
         raise NotImplementedError("Question 4: implement DataBlock.write()")
 
     def read(self, offset: int, size: int) -> bytes:
@@ -98,6 +110,14 @@ class PartialBlockAllocation:
     pointer: BlockPointer
     block: DataBlock
 
+    def reserve(self, payload_size: int) -> BlockPointer:
+        """Consume the tentative allocation and return the final pointer.
+
+        The implementation should validate that the reserved offset still
+        matches `pointer.offset` before returning the durable `BlockPointer`.
+        """
+        raise NotImplementedError("Question 4: implement PartialBlockAllocation.reserve()")
+
 
 class PartialBlockManager:
     """Pack smaller payloads into partially filled blocks.
@@ -105,7 +125,7 @@ class PartialBlockManager:
     Goal for the candidate:
     - try to reuse existing blocks first
     - allocate a new block when needed
-    - expose a simple `allocate()` API that returns a `BlockPointer`
+    - expose a tentative `allocate()` API and a final `reserve()` API
     """
 
     def __init__(self, block_manager: BlockManager) -> None:
@@ -116,6 +136,18 @@ class PartialBlockManager:
         """Return a block allocation that can fit `payload_size` bytes."""
         raise NotImplementedError("Question 4: implement PartialBlockManager.allocate()")
 
+    def reserve(self, payload_size: int) -> BlockPointer:
+        """Reserve space for `payload_size` bytes and return its pointer.
+
+        The final implementation should centralize block-capacity validation,
+        consume the reservation, and re-register any remaining partial capacity.
+        """
+        raise NotImplementedError("Question 4: implement PartialBlockManager.reserve()")
+
     def register_block(self, block: DataBlock) -> None:
-        """Register a block for future partial reuse."""
+        """Register a block for future partial reuse.
+
+        Full blocks should not be re-registered, and blocks already tracked as
+        reusable should not be duplicated in the partial list.
+        """
         raise NotImplementedError("Question 4: implement PartialBlockManager.register_block()")
