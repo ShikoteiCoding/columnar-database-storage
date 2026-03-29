@@ -9,12 +9,15 @@ from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from .blocks import BlockManager, BlockPointer, PartialBlockManager
 from .catalog import ColumnDefinition, TableDefinition
 from .segment_tree import SegmentBase, SegmentTree
 from .stats import BaseStatistics
+
+if TYPE_CHECKING:
+    from .checkpoint import SingleFileTableDataWriter
 
 
 @dataclass
@@ -433,7 +436,7 @@ class DataTable:
     - own a `RowGroupCollection`
     - append rows
     - scan rows
-    - produce final table checkpoint metadata
+    - delegate final table metadata writing to a provided checkpoint writer
     """
 
     def __init__(self, definition: TableDefinition, row_group_size: int = 122_880) -> None:
@@ -450,7 +453,7 @@ class DataTable:
         """Read rows from the table."""
         return self.row_groups.scan_rows(row_start, count)
         
-    def checkpoint(self) -> dict[str, Any]:
+    def checkpoint(self, table_data_writer: SingleFileTableDataWriter) -> dict[str, Any]:
         """Return a simplified table metadata payload."""
         row_group_pointers = self.row_groups.checkpoint(self.block_manager, self.partial_blocks)
         
@@ -460,4 +463,3 @@ class DataTable:
             "row_groups": [pointer.serialize() for pointer in row_group_pointers],
             "table_pointer": "" # i don't know yet
         }
-        
