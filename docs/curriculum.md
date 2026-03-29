@@ -469,17 +469,28 @@ classDiagram
 		+scan_rows() list[dict]
 	}
 
-	class DataTable {
+	class RowGroupCollection {
 		+definition: TableDefinition
+		+row_group_size: int
 		+row_groups: SegmentTree~RowGroup~
 		+append_rows(rows: list[dict]) None
 		+scan_rows() list[dict]
-		+get_or_create_active_row_group() RowGroup
+		+total_rows() int
+	}
+
+	class DataTable {
+		+definition: TableDefinition
+		+row_groups: RowGroupCollection
+		+append_rows(rows: list[dict]) None
+		+scan_rows() list[dict]
 	}
 
 	SegmentBase <|-- RowGroup
-	DataTable --> SegmentTree~T~ : indexes row groups
+	DataTable --> RowGroupCollection : owns
+	RowGroupCollection --> SegmentTree~T~ : indexes row groups
 	SegmentTree~T~ --> RowGroup : stores ordered ranges
+	DataTable --> TableDefinition : follows schema
+	RowGroupCollection --> TableDefinition : creates row groups from
 ```
 
 ### Goal
@@ -525,29 +536,60 @@ classDiagram
 	}
 
 	class ColumnCheckpointState {
-		+column_name: str
-		+segment_pointers: list[DataPointer]
-		+serialize() dict
+		+data_pointers: list[dict]
+		+statistics: BaseStatistics
 	}
 
 	class RowGroupPointer {
-		+row_group_start: int
-		+row_group_count: int
-		+columns: list[ColumnCheckpointState]
-		+version_pointer: DataPointer | None
+		+row_start: int
+		+tuple_count: int
+		+data_pointers: list[list[dict]]
+		+delete_pointers: list[dict]
 		+serialize() dict
 	}
 
-	class TableCheckpoint {
-		+table_name: str
-		+row_groups: list[RowGroupPointer]
-		+serialize() dict
+	class RowGroupWriteData {
+		+states: list[ColumnCheckpointState]
+		+statistics: list[BaseStatistics]
+	}
+
+	class CollectionCheckpointState {
+		+row_group_pointers: list[RowGroupPointer]
+	}
+
+	class MetadataWriter {
+		+payloads: list[dict]
+		+get_meta_block_pointer() dict
+		+write_payload(payload: dict) dict
+		+read_payload(pointer: dict) dict
+	}
+
+	class SingleFileTableDataWriter {
+		+metadata_writer: MetadataWriter
+		+finalize_table(table_name: str, table_statistics: dict, row_group_pointers: list[RowGroupPointer]) dict
+	}
+
+	class RowGroup {
+		+checkpoint(block_manager: BlockManager, partial_blocks: PartialBlockManager) RowGroupPointer
+	}
+
+	class RowGroupCollection {
+		+checkpoint(block_manager: BlockManager, partial_blocks: PartialBlockManager) list[RowGroupPointer]
+	}
+
+	class DataTable {
+		+row_groups: RowGroupCollection
+		+checkpoint() dict
 	}
 
 	ColumnCheckpointState --> DataPointer : contains segment metadata
-	RowGroupPointer --> ColumnCheckpointState : aggregates columns
-	RowGroupPointer --> DataPointer : references delete metadata
-	TableCheckpoint --> RowGroupPointer : aggregates row groups
+	RowGroupWriteData --> ColumnCheckpointState : groups per-column state
+	CollectionCheckpointState --> RowGroupPointer : aggregates row groups
+	RowGroup --> RowGroupPointer : emits
+	RowGroupCollection --> RowGroupPointer : aggregates
+	DataTable --> RowGroupCollection : checkpoints through
+	SingleFileTableDataWriter --> MetadataWriter : writes payloads with
+	SingleFileTableDataWriter --> RowGroupPointer : serializes row groups from
 ```
 
 ### Goal
@@ -587,13 +629,19 @@ Learning this matters because good systems design is not only about building int
 
 ```mermaid
 classDiagram
+	class MiniDatabaseEngine {
+		+database: AttachedDatabase
+		+create_schema(schema_name: str) None
+		+create_table(schema_name: str, table_name: str, columns: list[ColumnDefinition]) None
+		+insert_rows(schema_name: str, table_name: str, rows: list[dict]) None
+		+scan_rows(schema_name: str, table_name: str, row_start: int, count: int) list[dict]
+		+checkpoint_table(schema_name: str, table_name: str) dict
+	}
+
 	class AttachedDatabase {
 		+name: str
 		+catalog: Catalog
-		+create_table(schema_name: str, definition: TableDefinition) None
-		+insert_rows(schema_name: str, table_name: str, rows: list[dict]) None
-		+scan_rows(schema_name: str, table_name: str) list[dict]
-		+checkpoint_table(schema_name: str, table_name: str) dict
+		+get_catalog() Catalog
 	}
 
 	class Catalog {
@@ -609,16 +657,31 @@ classDiagram
 		+data_table: DataTable
 	}
 
+	class TableDefinition {
+		+name: str
+		+columns: list[ColumnDefinition]
+	}
+
+	class ColumnDefinition {
+		+name: str
+		+python_type: type
+		+nullable: bool
+	}
+
 	class DataTable {
 		+append_rows(rows: list[dict]) None
-		+scan_rows() list[dict]
+		+scan_rows(row_start: int, count: int) list[dict]
 		+checkpoint() dict
 	}
 
-	AttachedDatabase --> Catalog : uses
+	MiniDatabaseEngine --> AttachedDatabase : owns
+	MiniDatabaseEngine --> TableDefinition : builds
+	AttachedDatabase --> Catalog : exposes
 	Catalog --> Schema : resolves
 	Schema --> DuckTableEntry : resolves
 	DuckTableEntry --> DataTable : delegates to
+	DuckTableEntry --> TableDefinition : describes
+	TableDefinition --> ColumnDefinition : contains
 ```
 
 ### Goal
@@ -657,11 +720,26 @@ It also gives you a narrative mental model of the engine: create database, creat
 
 ```mermaid
 classDiagram
-	class AttachedDatabase {
-		+create_table(schema_name: str, definition: TableDefinition) None
+	class MiniDatabaseEngine {
+		+database: AttachedDatabase
+		+create_schema(schema_name: str) None
+		+create_table(schema_name: str, table_name: str, columns: list[ColumnDefinition]) None
 		+insert_rows(schema_name: str, table_name: str, rows: list[dict]) None
-		+scan_rows(schema_name: str, table_name: str) list[dict]
+		+scan_rows(schema_name: str, table_name: str, row_start: int, count: int) list[dict]
 		+checkpoint_table(schema_name: str, table_name: str) dict
+	}
+
+	class AttachedDatabase {
+		+catalog: Catalog
+		+get_catalog() Catalog
+	}
+
+	class Catalog {
+		+get_schema(schema_name: str) Schema
+	}
+
+	class Schema {
+		+get_table(table_name: str) DuckTableEntry
 	}
 
 	class DuckTableEntry {
@@ -670,9 +748,16 @@ classDiagram
 	}
 
 	class DataTable {
-		+row_groups: SegmentTree~RowGroup~
-		+scan_rows() list[dict]
+		+row_groups: RowGroupCollection
+		+append_rows(rows: list[dict]) None
+		+scan_rows(row_start: int, count: int) list[dict]
 		+checkpoint() dict
+	}
+
+	class RowGroupCollection {
+		+row_groups: SegmentTree~RowGroup~
+		+append_rows(rows: list[dict]) None
+		+scan_rows(row_start: int, count: int) list[dict]
 	}
 
 	class RowGroup {
@@ -680,14 +765,19 @@ classDiagram
 		+version_info: VersionInfo
 	}
 
-	class TableCheckpoint {
-		+row_groups: list[RowGroupPointer]
+	class SegmentTree~T~ {
+		+nodes: list[T]
+		+locate(row_id: int) T
 	}
 
-	AttachedDatabase --> DuckTableEntry : finds table
+	MiniDatabaseEngine --> AttachedDatabase : drives demo through
+	AttachedDatabase --> Catalog : exposes
+	Catalog --> Schema : resolves
+	Schema --> DuckTableEntry : finds table entry
 	DuckTableEntry --> DataTable : exposes storage
-	DataTable --> RowGroup : manages chunks
-	DataTable --> TableCheckpoint : emits metadata
+	DataTable --> RowGroupCollection : manages chunks through
+	RowGroupCollection --> SegmentTree~T~ : indexes row groups with
+	SegmentTree~T~ --> RowGroup : stores
 ```
 
 ### Goal
