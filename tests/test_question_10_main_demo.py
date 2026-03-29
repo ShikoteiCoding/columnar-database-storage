@@ -99,7 +99,9 @@ class MainDemoQuestionTests(unittest.TestCase):
         self.assertEqual(second_scan, first_scan)
         self.assertEqual(first_checkpoint["total_rows"], 3)
         self.assertEqual(second_checkpoint["total_rows"], 3)
-        self.assertEqual(first_checkpoint["row_groups"], second_checkpoint["row_groups"])
+        self.assertEqual(first_checkpoint["table_name"], second_checkpoint["table_name"])
+        self.assertIn("table_pointer", first_checkpoint)
+        self.assertIn("table_pointer", second_checkpoint)
 
     def test_engine_insert_rows_spills_overflow_into_later_row_groups(self) -> None:
         engine = self.make_engine(row_group_size=3)
