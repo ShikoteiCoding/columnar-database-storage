@@ -39,12 +39,26 @@ class DataPointer:
 
     def serialize(self) -> dict[str, Any]:
         """Serialize the data pointer."""
-        return self.__dict__
+        return {
+            "row_start": self.row_start,
+            "tuple_count": self.tuple_count,
+            "block_pointer": self.block_pointer.serialize(),
+            "statistics": self.statistics.serialize(),
+            "compression_type": self.compression_type,
+            "constant_value": self.constant_value
+        }
 
     @classmethod
     def deserialize(cls, payload: dict[str, Any]) -> DataPointer:
         """Deserialize the data pointer."""
-        return DataPointer(**payload)
+        return DataPointer(
+            row_start=payload["row_start"],
+            tuple_count=payload["tuple_count"],
+            block_pointer=BlockPointer.deserialize(payload["block_pointer"]),
+            statistics=BaseStatistics.deserialize(payload["statistics"]),
+            compression_type=payload.get("compression_type", "uncompressed"),
+            constant_value=payload.get("constant_value"),
+        )
 
 
 class VersionInfo:
@@ -236,12 +250,15 @@ class ColumnData:
 
         return data
 
-    def checkpoint(self, block_manager: BlockManager, partial_blocks: PartialBlockManager) -> list[DataPointer]:
+    def checkpoint(self, partial_blocks: PartialBlockManager) -> list[DataPointer]:
         """Persist segments and return metadata pointers."""
         data_pointers = []
+
         for node in self.segment_tree.nodes:
-            block_pointer = partial_blocks.allocate(node.estimate_size_bytes())
-            data_pointers.append(node.to_pointer(block_pointer.pointer))
+            estimated_size = node.estimate_size_bytes()
+            block_pointer = partial_blocks.reserve(estimated_size)
+            data_pointers.append(node.to_pointer(block_pointer))
+
         return data_pointers
 
 
@@ -343,7 +360,8 @@ class RowGroup(SegmentBase):
         data_pointers = []
 
         for col_name, column_data in self.columns.items():
-            data_pointers.append(column_data.checkpoint(block_manager, partial_blocks))
+            data_pointer_list = column_data.checkpoint(partial_blocks)
+            data_pointers.append([data_pointer.serialize() for data_pointer in data_pointer_list])
         
         delete_pointers = [self.version_info.serialize()]
 

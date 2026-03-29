@@ -55,16 +55,23 @@ class DataBlock:
         """Return remaining capacity in bytes."""
         return self.capacity - self.used
 
-    def write(self, payload: bytes) -> int:
-        """Write bytes and return the starting offset."""
+    def reserve(self, size: int) -> int:
+        """Reserve `size` bytes and return the starting offset."""
         prev_offset = self.used
-        size = len(payload)
-        
+
         if size > self.remaining_capacity():
             raise ValueError(f"Block is full")
 
+        self.used += size
+        return prev_offset
+
+    def write(self, payload: bytes) -> int:
+        """Write bytes and return the starting offset."""
+        size = len(payload)
+
+        prev_offset = self.reserve(size)
+
         self.data[prev_offset: prev_offset + size] = payload
-        self.used += len(payload)
         return prev_offset
 
     def read(self, offset: int, size: int) -> bytes:
@@ -109,6 +116,13 @@ class PartialBlockAllocation:
     pointer: BlockPointer
     block: DataBlock
 
+    def reserve(self, payload_size: int) -> BlockPointer:
+        """Consume reserved capacity and return the allocation pointer."""
+        offset = self.block.reserve(payload_size)
+        if offset != self.pointer.offset:
+            raise ValueError("Partial block allocation offset drifted before reservation")
+        return self.pointer
+
 
 class PartialBlockManager:
     """Pack smaller payloads into partially filled blocks.
@@ -134,6 +148,23 @@ class PartialBlockManager:
         new_block_pointer = BlockPointer(new_block.block_id, new_block.used)
         return PartialBlockAllocation(new_block_pointer, new_block)
 
+    def reserve(self, payload_size: int) -> BlockPointer:
+        """Reserve space for a payload and return its durable block pointer."""
+        if payload_size > BLOCK_SIZE:
+            raise ValueError("Payload exceeds block capacity")
+
+        allocation = self.allocate(payload_size)
+        pointer = allocation.reserve(payload_size)
+
+        if allocation.block.remaining_capacity() > 0:
+            self.register_block(allocation.block)
+
+        return pointer
+
     def register_block(self, block: DataBlock) -> None:
         """Register a block for future partial reuse."""
-        self.partial_blocks.append(block)
+        if block.remaining_capacity() == 0:
+            return
+
+        if block not in self.partial_blocks:
+            self.partial_blocks.append(block)
