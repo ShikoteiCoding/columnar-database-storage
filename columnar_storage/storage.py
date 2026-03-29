@@ -347,7 +347,6 @@ class RowGroup(SegmentBase):
         
         delete_pointers = [self.version_info.serialize()]
 
-
         return RowGroupPointer(self.start, self.count, data_pointers, delete_pointers)
 
 
@@ -456,10 +455,5 @@ class DataTable:
     def checkpoint(self, table_data_writer: SingleFileTableDataWriter) -> dict[str, Any]:
         """Return a simplified table metadata payload."""
         row_group_pointers = self.row_groups.checkpoint(self.block_manager, self.partial_blocks)
+        return table_data_writer.finalize_table(table_name=self.definition.name, table_statistics={"total_rows": self.row_groups.total_rows()}, row_group_pointers=row_group_pointers)
         
-        return {
-            "table_name": self.definition.name,
-            "total_rows": self.row_groups.total_rows(),
-            "row_groups": [pointer.serialize() for pointer in row_group_pointers],
-            "table_pointer": "" # i don't know yet
-        }

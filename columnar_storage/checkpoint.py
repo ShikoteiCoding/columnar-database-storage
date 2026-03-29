@@ -91,4 +91,9 @@ class SingleFileTableDataWriter:
         row_group_pointers: list[RowGroupPointer],
     ) -> dict[str, Any]:
         """Build the final table metadata payload."""
-        raise NotImplementedError("Question 8: implement SingleFileTableDataWriter.finalize_table()")
+        
+        return {
+            "table_name": table_name,
+            **table_statistics,
+            "table_pointer": self.metadata_writer.write_payload({"row_groups": [pointer.serialize() for pointer in row_group_pointers]})
+        }

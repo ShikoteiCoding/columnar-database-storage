@@ -98,6 +98,7 @@ class CheckpointQuestionTests(unittest.TestCase):
         partial_blocks = PartialBlockManager(block_manager)
 
         pointer = row_group.checkpoint(block_manager, partial_blocks)
+        print(type(pointer.data_pointers[0]), type(pointer.data_pointers[0][0]))
         block_ids = {
             data_pointer["block_pointer"]["block_id"]
             for data_pointer in pointer.data_pointers[0]
