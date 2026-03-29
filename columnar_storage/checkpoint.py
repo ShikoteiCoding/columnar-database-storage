@@ -55,15 +55,20 @@ class MetadataWriter:
 
     def get_meta_block_pointer(self) -> dict[str, int]:
         """Return a pointer to the next metadata slot."""
-        raise NotImplementedError("Question 8: implement MetadataWriter.get_meta_block_pointer()")
+        return {"index": len(self.payloads)}
 
     def write_payload(self, payload: dict[str, Any]) -> dict[str, int]:
         """Store a payload and return its pointer."""
-        raise NotImplementedError("Question 8: implement MetadataWriter.write_payload()")
+        self.payloads.append(payload)
+        return {"index": len(self.payloads) - 1}
+        
 
     def read_payload(self, pointer: dict[str, int]) -> dict[str, Any]:
         """Read a payload by pointer."""
-        raise NotImplementedError("Question 8: implement MetadataWriter.read_payload()")
+        index = pointer["index"]
+        if index > len(self.payloads):
+            raise IndexError(f"pointer '{pointer}' out of range")
+        return self.payloads[pointer["index"]]
 
 
 class SingleFileTableDataWriter:

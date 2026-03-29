@@ -66,7 +66,7 @@ class VersionInfo:
 
     def serialize(self) -> dict[str, Any]:
         """Serialize delete metadata."""
-        raise NotImplementedError("Question 8: implement VersionInfo.serialize()")
+        return {"deleted_row_ids": sorted(self.deleted_row_ids)}
 
 
 class ColumnSegment(SegmentBase):
@@ -233,10 +233,13 @@ class ColumnData:
 
         return data
 
-
     def checkpoint(self, block_manager: BlockManager, partial_blocks: PartialBlockManager) -> list[DataPointer]:
         """Persist segments and return metadata pointers."""
-        raise NotImplementedError("Question 8: implement ColumnData.checkpoint()")
+        data_pointers = []
+        for node in self.segment_tree.nodes:
+            block_pointer = partial_blocks.allocate(node.estimate_size_bytes())
+            data_pointers.append(node.to_pointer(block_pointer.pointer))
+        return data_pointers
 
 
 @dataclass
@@ -250,7 +253,7 @@ class RowGroupPointer:
 
     def serialize(self) -> dict[str, Any]:
         """Serialize the row group pointer."""
-        raise NotImplementedError("Question 8: implement RowGroupPointer.serialize()")
+        return self.__dict__
 
 
 class RowGroup(SegmentBase):
@@ -334,7 +337,15 @@ class RowGroup(SegmentBase):
 
     def checkpoint(self, block_manager: BlockManager, partial_blocks: PartialBlockManager) -> RowGroupPointer:
         """Checkpoint this row group into row-group metadata."""
-        raise NotImplementedError("Question 8: implement RowGroup.checkpoint()")
+        data_pointers = []
+
+        for col_name, column_data in self.columns.items():
+            data_pointers.append(column_data.checkpoint(block_manager, partial_blocks))
+        
+        delete_pointers = [self.version_info.serialize()]
+
+
+        return RowGroupPointer(self.start, self.count, data_pointers, delete_pointers)
 
 
 class RowGroupCollection:
@@ -407,7 +418,12 @@ class RowGroupCollection:
 
     def checkpoint(self, block_manager: BlockManager, partial_blocks: PartialBlockManager) -> list[RowGroupPointer]:
         """Checkpoint all row groups."""
-        raise NotImplementedError("Question 8: implement RowGroupCollection.checkpoint()")
+        row_group_pointers = []
+
+        for node in self.row_groups.nodes:
+            row_group_pointers.append(node.checkpoint(block_manager, partial_blocks))
+
+        return row_group_pointers
 
 
 class DataTable:
@@ -436,4 +452,12 @@ class DataTable:
         
     def checkpoint(self) -> dict[str, Any]:
         """Return a simplified table metadata payload."""
-        raise NotImplementedError("Question 8: implement DataTable.checkpoint()")
+        row_group_pointers = self.row_groups.checkpoint(self.block_manager, self.partial_blocks)
+        
+        return {
+            "table_name": self.definition.name,
+            "total_rows": self.row_groups.total_rows(),
+            "row_groups": [pointer.serialize() for pointer in row_group_pointers],
+            "table_pointer": "" # i don't know yet
+        }
+        
