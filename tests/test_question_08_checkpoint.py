@@ -45,6 +45,8 @@ class CheckpointQuestionTests(unittest.TestCase):
 
     def test_table_checkpoint_returns_row_group_metadata(self) -> None:
         table = DataTable(self.definition, row_group_size=2)
+        writer = MetadataWriter()
+        table_writer = SingleFileTableDataWriter(writer)
         table.append_rows([
             {"id": 1, "kind": "a", "value": 10},
             {"id": 2, "kind": "b", "value": None},
@@ -53,17 +55,20 @@ class CheckpointQuestionTests(unittest.TestCase):
         # Tombstones must be captured too so recovery does not resurrect deleted rows.
         table.row_groups.row_groups.nodes[0].delete_row(1)
 
-        payload = table.checkpoint()
+        payload = table.checkpoint(table_writer)
+        table_metadata = writer.read_payload(payload["table_pointer"])
 
         self.assertEqual(payload["table_name"], "events")
         self.assertEqual(payload["total_rows"], 3)
-        self.assertEqual(len(payload["row_groups"]), 2)
         self.assertIn("table_pointer", payload)
-        self.assertEqual(payload["row_groups"][0]["row_start"], 0)
-        self.assertEqual(payload["row_groups"][0]["delete_pointers"][0]["deleted_row_ids"], [1])
+        self.assertEqual(len(table_metadata["row_groups"]), 2)
+        self.assertEqual(table_metadata["row_groups"][0]["row_start"], 0)
+        self.assertEqual(table_metadata["row_groups"][0]["delete_pointers"][0]["deleted_row_ids"], [1])
 
     def test_table_checkpoint_deduplicates_repeated_delete_actions(self) -> None:
         table = DataTable(self.definition, row_group_size=4)
+        writer = MetadataWriter()
+        table_writer = SingleFileTableDataWriter(writer)
         table.append_rows([
             {"id": 1, "kind": "a", "value": 10},
             {"id": 2, "kind": "b", "value": None},
@@ -73,9 +78,10 @@ class CheckpointQuestionTests(unittest.TestCase):
         table.row_groups.row_groups.nodes[0].delete_row(1)
         table.row_groups.row_groups.nodes[0].delete_row(1)
 
-        payload = table.checkpoint()
+        payload = table.checkpoint(table_writer)
+        table_metadata = writer.read_payload(payload["table_pointer"])
 
-        self.assertEqual(payload["row_groups"][0]["delete_pointers"], [{"deleted_row_ids": [1]}])
+        self.assertEqual(table_metadata["row_groups"][0]["delete_pointers"], [{"deleted_row_ids": [1]}])
 
     def test_row_group_checkpoint_spills_to_multiple_blocks_when_segments_keep_growing(self) -> None:
         definition = TableDefinition(
@@ -125,7 +131,9 @@ class CheckpointQuestionTests(unittest.TestCase):
         writer = MetadataWriter()
         table_writer = SingleFileTableDataWriter(writer)
 
-        # The catalog keeps one pointer to the table metadata blob rather than inlining everything.
+        # This isolates the two metadata layers:
+        # - the catalog-facing payload keeps a pointer plus the row-group-derived `total_rows`
+        # - the referenced metadata blob keeps richer table-level summaries such as `table_statistics`
         payload = table_writer.finalize_table(
             table_name="events",
             table_statistics={"row_count": 3},
@@ -134,6 +142,8 @@ class CheckpointQuestionTests(unittest.TestCase):
 
         self.assertEqual(payload["table_name"], "events")
         self.assertEqual(payload["table_pointer"], {"index": 0})
+        # No row groups were provided in this isolated unit test, so the catalog-facing row total is zero
+        # even though the deeper table metadata blob still preserves the logical summary statistics.
         self.assertEqual(payload["total_rows"], 0)
         self.assertEqual(writer.read_payload({"index": 0})["table_statistics"], {"row_count": 3})
 
