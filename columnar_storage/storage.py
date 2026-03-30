@@ -211,7 +211,12 @@ class ColumnData:
     - checkpoint into `DataPointer` metadata using `PartialBlockManager`
     """
 
-    def __init__(self, definition: ColumnDefinition, row_group_start: int, segment_size: int = 2048) -> None:
+    def __init__(
+        self,
+        definition: ColumnDefinition,
+        row_group_start: int,
+        segment_size: int = 2048,
+    ) -> None:
         self.definition = definition
         self.row_group_start = row_group_start
         self.segment_size = segment_size
@@ -286,7 +291,9 @@ class RowGroup(SegmentBase):
     - keep deletion metadata in `VersionInfo`
     """
 
-    def __init__(self, definition: TableDefinition, start: int, max_rows: int = 122_880) -> None:
+    def __init__(
+        self, definition: TableDefinition, start: int, max_rows: int = 122_880
+    ) -> None:
         super().__init__(start=start, count=0)
         self.definition = definition
         self.max_rows = max_rows
@@ -377,7 +384,9 @@ class RowGroupCollection:
     - coordinate row-group checkpointing
     """
 
-    def __init__(self, definition: TableDefinition, row_group_size: int = 122_880) -> None:
+    def __init__(
+        self, definition: TableDefinition, row_group_size: int = 122_880
+    ) -> None:
         self.definition = definition
         self.row_group_size = row_group_size
         self.row_groups: SegmentTree[RowGroup] = SegmentTree()
@@ -439,7 +448,9 @@ class RowGroupCollection:
             total += node.count
         return total
 
-    def checkpoint(self, block_manager: BlockManager, partial_blocks: PartialBlockManager) -> list[RowGroupPointer]:
+    def checkpoint(
+        self, block_manager: BlockManager, partial_blocks: PartialBlockManager
+    ) -> list[RowGroupPointer]:
         """Checkpoint all row groups."""
         row_group_pointers = []
 
@@ -459,7 +470,9 @@ class DataTable:
     - delegate final table metadata writing to a provided checkpoint writer
     """
 
-    def __init__(self, definition: TableDefinition, row_group_size: int = 122_880) -> None:
+    def __init__(
+        self, definition: TableDefinition, row_group_size: int = 122_880
+    ) -> None:
         self.definition = definition
         self.row_groups = RowGroupCollection(definition, row_group_size=row_group_size)
         self.block_manager = BlockManager()

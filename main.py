@@ -44,7 +44,12 @@ def run_demo() -> dict[str, Any]:
     ]
     engine.insert_rows("analytics", "events", rows)
 
-    table_entry = engine.database.get_catalog().get_schema("analytics").get_table("events")
+    schema = engine.database.get_catalog().get_schema("analytics")
+    if schema is None:
+        raise ValueError("Schema analytics was not created")
+    table_entry = schema.get_table("events")
+    if table_entry is None:
+        raise ValueError("Table analytics.events was not created")
     first_row_group = table_entry.data_table.row_groups.row_groups.nodes[0]
     first_row_group.delete_row(1)
 

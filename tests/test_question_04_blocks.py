@@ -32,7 +32,9 @@ class BlocksQuestionTests(unittest.TestCase):
         self.assertEqual(block.read(0, 9), b"abcdefghi")
         self.assertEqual(block.remaining_capacity(), BLOCK_SIZE - 9)
 
-    def test_data_block_reserve_tracks_offsets_without_requiring_a_payload(self) -> None:
+    def test_data_block_reserve_tracks_offsets_without_requiring_a_payload(
+        self,
+    ) -> None:
         manager = BlockManager()
         block = manager.allocate_block()
 
@@ -123,7 +125,9 @@ class BlocksQuestionTests(unittest.TestCase):
 
         self.assertNotEqual(second.block_id, first.block_id)
 
-    def test_partial_block_manager_allocates_new_block_after_reuse_overflow(self) -> None:
+    def test_partial_block_manager_allocates_new_block_after_reuse_overflow(
+        self,
+    ) -> None:
         manager = BlockManager()
         partials = PartialBlockManager(manager)
 
@@ -142,7 +146,9 @@ class BlocksQuestionTests(unittest.TestCase):
         self.assertNotEqual(third.block_id, first.block_id)
         self.assertEqual(first_block.remaining_capacity(), 0)
 
-    def test_partial_block_manager_rejects_one_payload_larger_than_a_block(self) -> None:
+    def test_partial_block_manager_rejects_one_payload_larger_than_a_block(
+        self,
+    ) -> None:
         manager = BlockManager()
         partials = PartialBlockManager(manager)
 
