@@ -1,12 +1,40 @@
 """Educational columnar storage package."""
 
-from .blocks import BLOCK_SIZE, BlockPointer, BlockManager, DataBlock, PartialBlockManager
-from .catalog import AttachedDatabase, Catalog, ColumnDefinition, DuckTableEntry, Schema, TableDefinition
-from .checkpoint import CollectionCheckpointState, ColumnCheckpointState, MetadataWriter, RowGroupWriteData, SingleFileTableDataWriter
+from .blocks import (
+    BLOCK_SIZE,
+    BlockPointer,
+    BlockManager,
+    DataBlock,
+    PartialBlockManager,
+)
+from .catalog import (
+    AttachedDatabase,
+    Catalog,
+    ColumnDefinition,
+    DuckTableEntry,
+    Schema,
+    TableDefinition,
+)
+from .checkpoint import (
+    CollectionCheckpointState,
+    ColumnCheckpointState,
+    MetadataWriter,
+    RowGroupWriteData,
+    SingleFileTableDataWriter,
+)
 from .database import MiniDatabaseEngine
 from .segment_tree import SegmentBase, SegmentTree
 from .stats import BaseStatistics
-from .storage import ColumnData, ColumnSegment, DataPointer, DataTable, RowGroup, RowGroupCollection, RowGroupPointer, VersionInfo
+from .storage import (
+    ColumnData,
+    ColumnSegment,
+    DataPointer,
+    DataTable,
+    RowGroup,
+    RowGroupCollection,
+    RowGroupPointer,
+    VersionInfo,
+)
 
 __all__ = [
     "AttachedDatabase",

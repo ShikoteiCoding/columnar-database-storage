@@ -77,7 +77,10 @@ class CatalogQuestionTests(unittest.TestCase):
         database = AttachedDatabase("demo")
         catalog = database.get_catalog()
         analytics = catalog.create_schema("analytics")
-        analytics.create_table(self.make_definition("events"), DataTable(self.make_definition("events"), row_group_size=4))
+        analytics.create_table(
+            self.make_definition("events"),
+            DataTable(self.make_definition("events"), row_group_size=4),
+        )
 
         # Missing names should resolve cleanly without leaking another schema or table.
         self.assertIsNone(catalog.get_schema("missing"))
