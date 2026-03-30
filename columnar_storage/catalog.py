@@ -72,7 +72,9 @@ class Schema:
         self.name = name
         self.tables: dict[str, DuckTableEntry] = {}
 
-    def create_table(self, definition: TableDefinition, data_table: DataTable) -> DuckTableEntry:
+    def create_table(
+        self, definition: TableDefinition, data_table: DataTable
+    ) -> DuckTableEntry:
         """Create and register a `DuckTableEntry` inside this schema."""
         raise NotImplementedError("Question 1: implement Schema.create_table()")
 

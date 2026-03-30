@@ -5,8 +5,8 @@ UV_RUN = uv run python
 setup sync:
 	uv sync
 
-lint:
-	uv run ruff check .
+ruff:
+	uv run ruff check . && uv run format --check .
 
 test:
 	$(UV_RUN) -m unittest discover -s tests -p 'test_*.py'

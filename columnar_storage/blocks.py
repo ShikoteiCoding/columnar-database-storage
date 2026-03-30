@@ -53,7 +53,9 @@ class DataBlock:
 
     def remaining_capacity(self) -> int:
         """Return remaining capacity in bytes."""
-        raise NotImplementedError("Question 4: implement DataBlock.remaining_capacity()")
+        raise NotImplementedError(
+            "Question 4: implement DataBlock.remaining_capacity()"
+        )
 
     def reserve(self, size: int) -> int:
         """Reserve `size` bytes and return the starting offset.
@@ -100,7 +102,9 @@ class BlockManager:
 
     def mark_block_as_modified(self, block_id: int) -> None:
         """Track a block as modified or reclaimable."""
-        raise NotImplementedError("Question 4: implement BlockManager.mark_block_as_modified()")
+        raise NotImplementedError(
+            "Question 4: implement BlockManager.mark_block_as_modified()"
+        )
 
 
 @dataclass
@@ -116,7 +120,9 @@ class PartialBlockAllocation:
         The implementation should validate that the reserved offset still
         matches `pointer.offset` before returning the durable `BlockPointer`.
         """
-        raise NotImplementedError("Question 4: implement PartialBlockAllocation.reserve()")
+        raise NotImplementedError(
+            "Question 4: implement PartialBlockAllocation.reserve()"
+        )
 
 
 class PartialBlockManager:
@@ -134,7 +140,9 @@ class PartialBlockManager:
 
     def allocate(self, payload_size: int) -> PartialBlockAllocation:
         """Return a block allocation that can fit `payload_size` bytes."""
-        raise NotImplementedError("Question 4: implement PartialBlockManager.allocate()")
+        raise NotImplementedError(
+            "Question 4: implement PartialBlockManager.allocate()"
+        )
 
     def reserve(self, payload_size: int) -> BlockPointer:
         """Reserve space for `payload_size` bytes and return its pointer.
@@ -150,4 +158,6 @@ class PartialBlockManager:
         Full blocks should not be re-registered, and blocks already tracked as
         reusable should not be duplicated in the partial list.
         """
-        raise NotImplementedError("Question 4: implement PartialBlockManager.register_block()")
+        raise NotImplementedError(
+            "Question 4: implement PartialBlockManager.register_block()"
+        )
