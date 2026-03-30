@@ -8,12 +8,15 @@ This module mirrors the educational hierarchy:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from .blocks import BlockManager, BlockPointer, PartialBlockManager
 from .catalog import ColumnDefinition, TableDefinition
 from .segment_tree import SegmentBase, SegmentTree
 from .stats import BaseStatistics
+
+if TYPE_CHECKING:
+    from .checkpoint import SingleFileTableDataWriter
 
 
 @dataclass
@@ -190,7 +193,7 @@ class ColumnData:
     - own a `SegmentTree` of `ColumnSegment` nodes
     - append values while creating new segments when needed
     - scan values by absolute row range
-    - checkpoint into `DataPointer` metadata
+    - checkpoint into `DataPointer` metadata using `PartialBlockManager`
     """
 
     def __init__(self, definition: ColumnDefinition, row_group_start: int, segment_size: int = 2048) -> None:
@@ -207,8 +210,13 @@ class ColumnData:
         """Return values for the requested absolute row range."""
         raise NotImplementedError("Question 6: implement ColumnData.scan()")
 
-    def checkpoint(self, block_manager: BlockManager, partial_blocks: PartialBlockManager) -> list[DataPointer]:
-        """Persist segments and return metadata pointers."""
+    def checkpoint(self, partial_blocks: PartialBlockManager) -> list[DataPointer]:
+        """Persist segments and return metadata pointers.
+
+        `ColumnData` no longer needs direct access to `BlockManager`; the
+        checkpoint allocation policy now flows entirely through
+        `PartialBlockManager`.
+        """
         raise NotImplementedError("Question 8: implement ColumnData.checkpoint()")
 
 
@@ -263,7 +271,11 @@ class RowGroup(SegmentBase):
         raise NotImplementedError("Question 6: implement RowGroup.delete_row()")
 
     def checkpoint(self, block_manager: BlockManager, partial_blocks: PartialBlockManager) -> RowGroupPointer:
-        """Checkpoint this row group into row-group metadata."""
+        """Checkpoint this row group into row-group metadata.
+
+        This signature stays unchanged for compatibility, but the inner column
+        checkpoint path should call `ColumnData.checkpoint(partial_blocks)`.
+        """
         raise NotImplementedError("Question 8: implement RowGroup.checkpoint()")
 
 
@@ -305,7 +317,7 @@ class DataTable:
     - own a `RowGroupCollection`
     - append rows
     - scan rows
-    - produce final table checkpoint metadata
+    - delegate final table metadata writing to a provided checkpoint writer
     """
 
     def __init__(self, definition: TableDefinition, row_group_size: int = 122_880) -> None:
@@ -322,6 +334,6 @@ class DataTable:
         """Read rows from the table."""
         raise NotImplementedError("Question 7: implement DataTable.scan_rows()")
 
-    def checkpoint(self) -> dict[str, Any]:
-        """Return a simplified table metadata payload."""
+    def checkpoint(self, table_data_writer: "SingleFileTableDataWriter") -> dict[str, Any]:
+        """Checkpoint row groups and delegate final metadata writing."""
         raise NotImplementedError("Question 8: implement DataTable.checkpoint()")
