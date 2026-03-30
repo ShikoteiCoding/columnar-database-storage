@@ -38,16 +38,12 @@ class DataPointer:
 
     def serialize(self) -> dict[str, Any]:
         """Serialize the data pointer."""
-        raise NotImplementedError("Question 3: implement DataPointer.serialize()")
+        return self.__dict__
 
     @classmethod
-    def deserialize(cls, payload: dict[str, Any]) -> "DataPointer":
-        """Deserialize the data pointer.
-
-        Nested payloads should be reconstructed into typed objects by calling
-        `BlockPointer.deserialize(...)` and `BaseStatistics.deserialize(...)`.
-        """
-        raise NotImplementedError("Question 3: implement DataPointer.deserialize()")
+    def deserialize(cls, payload: dict[str, Any]) -> DataPointer:
+        """Deserialize the data pointer."""
+        return DataPointer(**payload)
 
 
 class VersionInfo:

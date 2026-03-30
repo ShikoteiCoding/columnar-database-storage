@@ -28,12 +28,12 @@ class BlockPointer:
 
     def serialize(self) -> dict[str, Any]:
         """Serialize the pointer."""
-        raise NotImplementedError("Question 3: implement BlockPointer.serialize()")
+        return self.__dict__
 
     @classmethod
-    def deserialize(cls, payload: dict[str, Any]) -> "BlockPointer":
+    def deserialize(cls, payload: dict[str, Any]) -> BlockPointer:
         """Deserialize the pointer."""
-        raise NotImplementedError("Question 3: implement BlockPointer.deserialize()")
+        return BlockPointer(**payload)
 
 
 class DataBlock:
