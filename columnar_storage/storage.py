@@ -365,15 +365,57 @@ class RowGroupCollection:
 
     def append_rows(self, rows: list[dict[str, Any]]) -> None:
         """Append rows across one or more row groups."""
-        raise NotImplementedError("Question 7: implement RowGroupCollection.append_rows()")
+
+        last = self.row_groups.nodes[-1] if self.row_groups.nodes else None
+        start = 0
+
+        if last and (self.row_group_size - last.count > 0): # handle last group fill
+            start = self.row_group_size - last.count
+            last.append_rows(rows[0:start])
+
+        for i in range(start, len(rows) - start, self.row_group_size):
+            row_group = RowGroup(
+                self.definition,
+                0 if not last else last.start + last.count,
+                self.row_group_size
+            )
+        
+            row_group.append_rows(rows[i:i+self.row_group_size])
+            self.row_groups.append(row_group)
+            last = row_group
 
     def scan_rows(self, row_start: int, count: int) -> list[dict[str, Any]]:
         """Read rows across row-group boundaries."""
-        raise NotImplementedError("Question 7: implement RowGroupCollection.scan_rows()")
+        data = []
+        left = count
+        idx = row_start
+
+        row_group_index = self.row_groups.locate_index(row_start)
+        row_group = self.row_groups.nodes[row_group_index]
+
+        while left > 0:
+            if not row_group: # early quit
+                return data 
+
+            row_group_data = row_group.scan_rows(idx, left)
+            data.extend(row_group_data)
+
+            row_group_index += 1
+            if row_group_index >= len(self.row_groups.nodes): # exhausted the segments
+                return data
+
+            idx += len(row_group_data)
+            left -= len(row_group_data)
+            row_group = self.row_groups.nodes[row_group_index]
+
+        return data
 
     def total_rows(self) -> int:
         """Return the total number of visible rows including deleted ones."""
-        raise NotImplementedError("Question 7: implement RowGroupCollection.total_rows()")
+        total = 0
+        for node in self.row_groups.nodes:
+            total += node.count
+        return total
 
     def checkpoint(self, block_manager: BlockManager, partial_blocks: PartialBlockManager) -> list[RowGroupPointer]:
         """Checkpoint all row groups."""
@@ -398,12 +440,12 @@ class DataTable:
 
     def append_rows(self, rows: list[dict[str, Any]]) -> None:
         """Append rows into the table."""
-        raise NotImplementedError("Question 7: implement DataTable.append_rows()")
+        self.row_groups.append_rows(rows)
 
     def scan_rows(self, row_start: int, count: int) -> list[dict[str, Any]]:
         """Read rows from the table."""
-        raise NotImplementedError("Question 7: implement DataTable.scan_rows()")
-
-    def checkpoint(self, table_data_writer: "SingleFileTableDataWriter") -> dict[str, Any]:
+        return self.row_groups.scan_rows(row_start, count)
+        
+    def checkpoint(self, table_data_writer: SingleFileTableDataWriter) -> dict[str, Any]:
         """Checkpoint row groups and delegate final metadata writing."""
         raise NotImplementedError("Question 8: implement DataTable.checkpoint()")
