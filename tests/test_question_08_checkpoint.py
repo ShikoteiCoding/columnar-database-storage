@@ -26,7 +26,9 @@ class CheckpointQuestionTests(unittest.TestCase):
         self.assertEqual(pointer, {"index": 0})
         self.assertEqual(writer.read_payload(pointer), {"hello": "world"})
 
-    def test_metadata_writer_supports_repeated_writes_without_clobbering_prior_payloads(self) -> None:
+    def test_metadata_writer_supports_repeated_writes_without_clobbering_prior_payloads(
+        self,
+    ) -> None:
         writer = MetadataWriter()
 
         first = writer.write_payload({"batch": 1})
@@ -47,11 +49,13 @@ class CheckpointQuestionTests(unittest.TestCase):
         table = DataTable(self.definition, row_group_size=2)
         writer = MetadataWriter()
         table_writer = SingleFileTableDataWriter(writer)
-        table.append_rows([
-            {"id": 1, "kind": "a", "value": 10},
-            {"id": 2, "kind": "b", "value": None},
-            {"id": 3, "kind": "c", "value": 30},
-        ])
+        table.append_rows(
+            [
+                {"id": 1, "kind": "a", "value": 10},
+                {"id": 2, "kind": "b", "value": None},
+                {"id": 3, "kind": "c", "value": 30},
+            ]
+        )
         # Tombstones must be captured too so recovery does not resurrect deleted rows.
         table.row_groups.row_groups.nodes[0].delete_row(1)
 
@@ -63,17 +67,22 @@ class CheckpointQuestionTests(unittest.TestCase):
         self.assertIn("table_pointer", payload)
         self.assertEqual(len(table_metadata["row_groups"]), 2)
         self.assertEqual(table_metadata["row_groups"][0]["row_start"], 0)
-        self.assertEqual(table_metadata["row_groups"][0]["delete_pointers"][0]["deleted_row_ids"], [1])
+        self.assertEqual(
+            table_metadata["row_groups"][0]["delete_pointers"][0]["deleted_row_ids"],
+            [1],
+        )
 
     def test_table_checkpoint_deduplicates_repeated_delete_actions(self) -> None:
         table = DataTable(self.definition, row_group_size=4)
         writer = MetadataWriter()
         table_writer = SingleFileTableDataWriter(writer)
-        table.append_rows([
-            {"id": 1, "kind": "a", "value": 10},
-            {"id": 2, "kind": "b", "value": None},
-            {"id": 3, "kind": "c", "value": 30},
-        ])
+        table.append_rows(
+            [
+                {"id": 1, "kind": "a", "value": 10},
+                {"id": 2, "kind": "b", "value": None},
+                {"id": 3, "kind": "c", "value": 30},
+            ]
+        )
 
         table.row_groups.row_groups.nodes[0].delete_row(1)
         table.row_groups.row_groups.nodes[0].delete_row(1)
@@ -81,19 +90,23 @@ class CheckpointQuestionTests(unittest.TestCase):
         payload = table.checkpoint(table_writer)
         table_metadata = writer.read_payload(payload["table_pointer"])
 
-        self.assertEqual(table_metadata["row_groups"][0]["delete_pointers"], [{"deleted_row_ids": [1]}])
+        self.assertEqual(
+            table_metadata["row_groups"][0]["delete_pointers"],
+            [{"deleted_row_ids": [1]}],
+        )
 
-    def test_row_group_checkpoint_spills_to_multiple_blocks_when_segments_keep_growing(self) -> None:
+    def test_row_group_checkpoint_spills_to_multiple_blocks_when_segments_keep_growing(
+        self,
+    ) -> None:
         definition = TableDefinition(
             name="messages",
             columns=[ColumnDefinition("payload", str, nullable=False)],
         )
         row_group = RowGroup(definition, start=0, max_rows=32)
         row_group.columns["payload"].segment_size = 1
-        row_group.append_rows([
-            {"payload": f"msg-{index}-" + ("x" * 20_000)}
-            for index in range(20)
-        ])
+        row_group.append_rows(
+            [{"payload": f"msg-{index}-" + ("x" * 20_000)} for index in range(20)]
+        )
         block_manager = BlockManager()
         partial_blocks = PartialBlockManager(block_manager)
 
@@ -107,7 +120,9 @@ class CheckpointQuestionTests(unittest.TestCase):
         self.assertEqual(len(pointer.data_pointers[0]), 20)
         self.assertGreater(len(block_ids), 1)
 
-    def test_row_group_checkpoint_raises_when_one_segment_overflows_a_block(self) -> None:
+    def test_row_group_checkpoint_raises_when_one_segment_overflows_a_block(
+        self,
+    ) -> None:
         definition = TableDefinition(
             name="messages",
             columns=[ColumnDefinition("payload", str, nullable=False)],
@@ -117,10 +132,12 @@ class CheckpointQuestionTests(unittest.TestCase):
             "a" * (BLOCK_SIZE // 2 + 1024),
             "b" * (BLOCK_SIZE // 2 + 1024),
         ]
-        row_group.append_rows([
-            {"payload": oversized_values[0]},
-            {"payload": oversized_values[1]},
-        ])
+        row_group.append_rows(
+            [
+                {"payload": oversized_values[0]},
+                {"payload": oversized_values[1]},
+            ]
+        )
         block_manager = BlockManager()
         partial_blocks = PartialBlockManager(block_manager)
 
@@ -145,9 +162,13 @@ class CheckpointQuestionTests(unittest.TestCase):
         # No row groups were provided in this isolated unit test, so the catalog-facing row total is zero
         # even though the deeper table metadata blob still preserves the logical summary statistics.
         self.assertEqual(payload["total_rows"], 0)
-        self.assertEqual(writer.read_payload({"index": 0})["table_statistics"], {"row_count": 3})
+        self.assertEqual(
+            writer.read_payload({"index": 0})["table_statistics"], {"row_count": 3}
+        )
 
-    def test_single_file_table_writer_rejects_overlapping_row_group_ranges(self) -> None:
+    def test_single_file_table_writer_rejects_overlapping_row_group_ranges(
+        self,
+    ) -> None:
         writer = MetadataWriter()
         table_writer = SingleFileTableDataWriter(writer)
 

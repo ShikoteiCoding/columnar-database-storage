@@ -115,7 +115,9 @@ class ColumnSegment(SegmentBase):
         can decide whether a segment is tiny, whether it should be packed into a
         partial block, or whether constant-segment metadata alone is sufficient.
         """
-        raise NotImplementedError("Question 5: implement ColumnSegment.estimate_size_bytes()")
+        raise NotImplementedError(
+            "Question 5: implement ColumnSegment.estimate_size_bytes()"
+        )
 
     def scan(self, local_offset: int = 0, count: int | None = None) -> list[Any]:
         """Read a slice of values from the segment."""
@@ -136,7 +138,12 @@ class ColumnData:
     - checkpoint into `DataPointer` metadata using `PartialBlockManager`
     """
 
-    def __init__(self, definition: ColumnDefinition, row_group_start: int, segment_size: int = 2048) -> None:
+    def __init__(
+        self,
+        definition: ColumnDefinition,
+        row_group_start: int,
+        segment_size: int = 2048,
+    ) -> None:
         self.definition = definition
         self.row_group_start = row_group_start
         self.segment_size = segment_size
@@ -184,7 +191,9 @@ class RowGroup(SegmentBase):
     - keep deletion metadata in `VersionInfo`
     """
 
-    def __init__(self, definition: TableDefinition, start: int, max_rows: int = 122_880) -> None:
+    def __init__(
+        self, definition: TableDefinition, start: int, max_rows: int = 122_880
+    ) -> None:
         super().__init__(start=start, count=0)
         self.definition = definition
         self.max_rows = max_rows
@@ -210,7 +219,9 @@ class RowGroup(SegmentBase):
         """Mark one absolute row id as deleted."""
         raise NotImplementedError("Question 6: implement RowGroup.delete_row()")
 
-    def checkpoint(self, block_manager: BlockManager, partial_blocks: PartialBlockManager) -> RowGroupPointer:
+    def checkpoint(
+        self, block_manager: BlockManager, partial_blocks: PartialBlockManager
+    ) -> RowGroupPointer:
         """Checkpoint this row group into row-group metadata.
 
         This signature stays unchanged for compatibility, but the inner column
@@ -228,26 +239,38 @@ class RowGroupCollection:
     - coordinate row-group checkpointing
     """
 
-    def __init__(self, definition: TableDefinition, row_group_size: int = 122_880) -> None:
+    def __init__(
+        self, definition: TableDefinition, row_group_size: int = 122_880
+    ) -> None:
         self.definition = definition
         self.row_group_size = row_group_size
         self.row_groups: SegmentTree[RowGroup] = SegmentTree()
 
     def append_rows(self, rows: list[dict[str, Any]]) -> None:
         """Append rows across one or more row groups."""
-        raise NotImplementedError("Question 7: implement RowGroupCollection.append_rows()")
+        raise NotImplementedError(
+            "Question 7: implement RowGroupCollection.append_rows()"
+        )
 
     def scan_rows(self, row_start: int, count: int) -> list[dict[str, Any]]:
         """Read rows across row-group boundaries."""
-        raise NotImplementedError("Question 7: implement RowGroupCollection.scan_rows()")
+        raise NotImplementedError(
+            "Question 7: implement RowGroupCollection.scan_rows()"
+        )
 
     def total_rows(self) -> int:
         """Return the total number of visible rows including deleted ones."""
-        raise NotImplementedError("Question 7: implement RowGroupCollection.total_rows()")
+        raise NotImplementedError(
+            "Question 7: implement RowGroupCollection.total_rows()"
+        )
 
-    def checkpoint(self, block_manager: BlockManager, partial_blocks: PartialBlockManager) -> list[RowGroupPointer]:
+    def checkpoint(
+        self, block_manager: BlockManager, partial_blocks: PartialBlockManager
+    ) -> list[RowGroupPointer]:
         """Checkpoint all row groups."""
-        raise NotImplementedError("Question 8: implement RowGroupCollection.checkpoint()")
+        raise NotImplementedError(
+            "Question 8: implement RowGroupCollection.checkpoint()"
+        )
 
 
 class DataTable:
@@ -260,7 +283,9 @@ class DataTable:
     - delegate final table metadata writing to a provided checkpoint writer
     """
 
-    def __init__(self, definition: TableDefinition, row_group_size: int = 122_880) -> None:
+    def __init__(
+        self, definition: TableDefinition, row_group_size: int = 122_880
+    ) -> None:
         self.definition = definition
         self.row_groups = RowGroupCollection(definition, row_group_size=row_group_size)
         self.block_manager = BlockManager()
@@ -274,6 +299,8 @@ class DataTable:
         """Read rows from the table."""
         raise NotImplementedError("Question 7: implement DataTable.scan_rows()")
 
-    def checkpoint(self, table_data_writer: "SingleFileTableDataWriter") -> dict[str, Any]:
+    def checkpoint(
+        self, table_data_writer: "SingleFileTableDataWriter"
+    ) -> dict[str, Any]:
         """Checkpoint row groups and delegate final metadata writing."""
         raise NotImplementedError("Question 8: implement DataTable.checkpoint()")
