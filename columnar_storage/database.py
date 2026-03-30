@@ -6,6 +6,7 @@ from typing import Any
 
 from .catalog import AttachedDatabase, ColumnDefinition, TableDefinition
 from .storage import DataTable
+from .checkpoint import SingleFileTableDataWriter, MetadataWriter
 
 
 class MiniDatabaseEngine:
@@ -19,26 +20,52 @@ class MiniDatabaseEngine:
 
     def __init__(self, database_name: str) -> None:
         self.database = AttachedDatabase(database_name)
+        self.data_writer = SingleFileTableDataWriter(MetadataWriter())
 
     def create_schema(self, schema_name: str) -> None:
         """Create a schema if needed through the attached database catalog."""
-        raise NotImplementedError("Question 9: implement MiniDatabaseEngine.create_schema()")
+        self.database.catalog.create_schema(schema_name)
 
     def create_table(self, schema_name: str, table_name: str, columns: list[ColumnDefinition]) -> None:
         """Create a table and attach a `DataTable` implementation."""
-        raise NotImplementedError("Question 9: implement MiniDatabaseEngine.create_table()")
+        table_definition = self.build_table_definition(table_name, columns)
+        data_table = DataTable(table_definition)
+        schema = self.database.get_catalog().get_schema(schema_name)
+        
+        if schema:
+            schema.create_table(table_definition, data_table)
 
     def insert_rows(self, schema_name: str, table_name: str, rows: list[dict[str, Any]]) -> None:
         """Append rows into a table."""
-        raise NotImplementedError("Question 9: implement MiniDatabaseEngine.insert_rows()")
+        """Create a table and attach a `DataTable` implementation."""
+        schema = self.database.get_catalog().get_schema(schema_name)
+
+        if schema:
+            table = schema.get_table(table_name)
+            if table:
+                table.data_table.append_rows(rows)
 
     def scan_rows(self, schema_name: str, table_name: str, row_start: int, count: int) -> list[dict[str, Any]]:
         """Read rows from a table."""
-        raise NotImplementedError("Question 9: implement MiniDatabaseEngine.scan_rows()")
+        schema = self.database.get_catalog().get_schema(schema_name)
+
+        if schema:
+            table = schema.get_table(table_name)
+            if table:
+                return table.data_table.scan_rows(row_start, count)
+        
+        return []
 
     def checkpoint_table(self, schema_name: str, table_name: str) -> dict[str, Any]:
         """Checkpoint a table and return the produced metadata."""
-        raise NotImplementedError("Question 9: implement MiniDatabaseEngine.checkpoint_table()")
+        schema = self.database.get_catalog().get_schema(schema_name)
+
+        if schema:
+            table = schema.get_table(table_name)
+            if table:
+                return table.data_table.checkpoint(self.data_writer)
+            
+        return {}
 
     @staticmethod
     def build_table_definition(table_name: str, columns: list[ColumnDefinition]) -> TableDefinition:

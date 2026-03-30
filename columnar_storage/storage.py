@@ -410,6 +410,9 @@ class RowGroupCollection:
         idx = row_start
 
         row_group_index = self.row_groups.locate_index(row_start)
+        if row_group_index == -1:
+            return []
+        
         row_group = self.row_groups.nodes[row_group_index]
 
         while left > 0:
