@@ -55,11 +55,15 @@ class MetadataWriter:
 
     def get_meta_block_pointer(self) -> dict[str, int]:
         """Return a pointer to the next metadata slot."""
-        raise NotImplementedError("Question 8: implement MetadataWriter.get_meta_block_pointer()")
+        raise NotImplementedError(
+            "Question 8: implement MetadataWriter.get_meta_block_pointer()"
+        )
 
     def write_payload(self, payload: dict[str, Any]) -> dict[str, int]:
         """Store a payload and return its pointer."""
-        raise NotImplementedError("Question 8: implement MetadataWriter.write_payload()")
+        raise NotImplementedError(
+            "Question 8: implement MetadataWriter.write_payload()"
+        )
 
     def read_payload(self, pointer: dict[str, int]) -> dict[str, Any]:
         """Read a payload by pointer."""
@@ -100,4 +104,6 @@ class SingleFileTableDataWriter:
         `table_statistics` remain stored inside the metadata blob referenced by
         `table_pointer`.
         """
-        raise NotImplementedError("Question 8: implement SingleFileTableDataWriter.finalize_table()")
+        raise NotImplementedError(
+            "Question 8: implement SingleFileTableDataWriter.finalize_table()"
+        )
