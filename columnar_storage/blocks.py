@@ -23,7 +23,7 @@ class BlockPointer:
     - serialize symmetrically for checkpoint metadata
     """
 
-    block_id: int | None
+    block_id: int
     offset: int = 0
 
     def serialize(self) -> dict[str, Any]:

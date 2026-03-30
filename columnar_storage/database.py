@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from .catalog import AttachedDatabase, ColumnDefinition, TableDefinition
+from .catalog import AttachedDatabase, ColumnDefinition, DuckTableEntry, TableDefinition
+from .checkpoint import MetadataWriter, SingleFileTableDataWriter
 from .storage import DataTable
 
 
@@ -17,8 +18,13 @@ class MiniDatabaseEngine:
     - expose checkpoint metadata from the underlying `DataTable`
     """
 
-    def __init__(self, database_name: str) -> None:
+    def __init__(
+        self,
+        database_name: str,
+        table_data_writer: SingleFileTableDataWriter | None = None,
+    ) -> None:
         self.database = AttachedDatabase(database_name)
+        self.table_data_writer = table_data_writer or SingleFileTableDataWriter(MetadataWriter())
 
     def create_schema(self, schema_name: str) -> None:
         """Create a schema if needed through the attached database catalog."""

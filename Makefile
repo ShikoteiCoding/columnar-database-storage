@@ -1,9 +1,12 @@
-.PHONY: setup sync test demo q1 q2 q3 q4 q5 q6 q7 q8 q9 q10 question-01 question-02 question-03 question-04 question-05 question-06 question-07 question-08 question-09 question-10
+.PHONY: setup sync lint test demo q1 q2 q3 q4 q5 q6 q7 q8 q9 q10 question-01 question-02 question-03 question-04 question-05 question-06 question-07 question-08 question-09 question-10
 
 UV_RUN = uv run python
 
 setup sync:
 	uv sync
+
+lint:
+	uv run ruff check .
 
 test:
 	$(UV_RUN) -m unittest discover -s tests -p 'test_*.py'

@@ -11,7 +11,10 @@ This module creates the same educational shape. Methods intentionally raise
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .storage import DataTable
 
 
 @dataclass(frozen=True)
@@ -53,7 +56,7 @@ class DuckTableEntry:
     """
 
     definition: TableDefinition
-    data_table: Any
+    data_table: DataTable
 
 
 class Schema:
@@ -69,11 +72,11 @@ class Schema:
         self.name = name
         self.tables: dict[str, DuckTableEntry] = {}
 
-    def create_table(self, definition: TableDefinition, data_table: Any) -> DuckTableEntry:
+    def create_table(self, definition: TableDefinition, data_table: DataTable) -> DuckTableEntry:
         """Create and register a `DuckTableEntry` inside this schema."""
         raise NotImplementedError("Question 1: implement Schema.create_table()")
 
-    def get_table(self, table_name: str) -> DuckTableEntry:
+    def get_table(self, table_name: str) -> DuckTableEntry | None:
         """Return a table entry by name."""
         raise NotImplementedError("Question 1: implement Schema.get_table()")
 
@@ -94,7 +97,7 @@ class Catalog:
         """Create a schema and return it."""
         raise NotImplementedError("Question 1: implement Catalog.create_schema()")
 
-    def get_schema(self, schema_name: str) -> Schema:
+    def get_schema(self, schema_name: str) -> Schema | None:
         """Return a previously created schema."""
         raise NotImplementedError("Question 1: implement Catalog.get_schema()")
 

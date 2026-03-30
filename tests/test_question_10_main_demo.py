@@ -21,7 +21,10 @@ class MainDemoQuestionTests(unittest.TestCase):
                 ColumnDefinition("value", int, nullable=True),
             ],
         )
-        table_entry = engine.database.get_catalog().get_schema("analytics").get_table("events")
+        schema = engine.database.get_catalog().get_schema("analytics")
+        assert schema is not None
+        table_entry = schema.get_table("events")
+        assert table_entry is not None
         table_entry.data_table.row_groups.row_group_size = row_group_size
         return engine
 
@@ -122,7 +125,10 @@ class MainDemoQuestionTests(unittest.TestCase):
             ],
         )
 
-        table_entry = engine.database.get_catalog().get_schema("analytics").get_table("events")
+        schema = engine.database.get_catalog().get_schema("analytics")
+        assert schema is not None
+        table_entry = schema.get_table("events")
+        assert table_entry is not None
         row_groups = table_entry.data_table.row_groups.row_groups.nodes
 
         self.assertEqual(

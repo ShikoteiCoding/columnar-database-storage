@@ -120,7 +120,10 @@ class DatabaseFacadeQuestionTests(unittest.TestCase):
         engine = self.make_engine()
         self.create_events_table(engine)
 
-        table_entry = engine.database.get_catalog().get_schema("analytics").get_table("events")
+        schema = engine.database.get_catalog().get_schema("analytics")
+        assert schema is not None
+        table_entry = schema.get_table("events")
+        assert table_entry is not None
         table_entry.data_table.row_groups.row_group_size = 2
 
         engine.insert_rows(
