@@ -95,14 +95,20 @@ class ColumnSegment(SegmentBase):
         self.max_values = max_values
         self.values: list[Any] = []
         self.statistics = BaseStatistics()
+        self._payload_size_bytes = 0
 
     def append(self, values: list[Any]) -> None:
         """Append values into the segment."""
-        raise NotImplementedError("Question 5: implement ColumnSegment.append()")
+        if len(values) + len(self.values) > self.max_values:
+            raise ValueError(f"Not able to append to column segment")
+        self._payload_size_bytes += self._estimate_batch_payload_bytes(values)
+        self.statistics.update(values)
+        self.values.extend(values)
+        self.count += len(values)
 
     def is_full(self) -> bool:
         """Return whether the segment reached its logical capacity."""
-        raise NotImplementedError("Question 5: implement ColumnSegment.is_full()")
+        return len(self.values) == self.max_values
 
     def estimate_size_bytes(self) -> int:
         """Return a rough serialized payload size for checkpoint planning.
@@ -111,15 +117,73 @@ class ColumnSegment(SegmentBase):
         can decide whether a segment is tiny, whether it should be packed into a
         partial block, or whether constant-segment metadata alone is sufficient.
         """
-        raise NotImplementedError("Question 5: implement ColumnSegment.estimate_size_bytes()")
+        if self.count == 0:
+            return 0
+
+        null_bitmap_bytes = (self.count + 7) // 8
+
+        # Constant segments are cheap to persist as metadata only.
+        if self.statistics.is_constant():
+            return null_bitmap_bytes + self._estimate_single_value_size(self.statistics.constant_value)
+
+        return null_bitmap_bytes + self._payload_size_bytes
+
+    def _estimate_batch_payload_bytes(self, values: list[Any]) -> int:
+        """Estimate bytes contributed by one appended batch.
+
+        This keeps `estimate_size_bytes()` cheap by doing any necessary work once
+        at append time instead of rescanning the whole segment later.
+        """
+        non_null_values = [value for value in values if value is not None]
+
+        if not non_null_values:
+            return 0
+
+        if self.column_type is bool:
+            return len(non_null_values)
+
+        if self.column_type in (int, float):
+            return 8 * len(non_null_values)
+
+        if self.column_type is str:
+            return sum(len(value.encode("utf-8")) for value in non_null_values)
+
+        return sum(self._estimate_single_value_size(value) for value in non_null_values)
+
+    def _estimate_single_value_size(self, value: Any) -> int:
+        """Estimate bytes for one logical value in persisted form."""
+        if value is None:
+            return 0
+
+        if self.column_type is bool or isinstance(value, bool):
+            return 1
+
+        if self.column_type in (int, float):
+            return 8
+
+        if self.column_type is str or isinstance(value, str):
+            return len(value.encode("utf-8"))
+
+        if isinstance(value, (int, float)):
+            return 8
+
+        return len(str(value).encode("utf-8"))
 
     def scan(self, local_offset: int = 0, count: int | None = None) -> list[Any]:
         """Read a slice of values from the segment."""
-        raise NotImplementedError("Question 5: implement ColumnSegment.scan()")
+        if not count:
+            return self.values[local_offset:]
+        return self.values[local_offset:local_offset+count]
 
-    def to_pointer(self, block_pointer: BlockPointer | None = None) -> DataPointer:
+    def to_pointer(self, block_pointer: BlockPointer) -> DataPointer:
         """Create a `DataPointer` for this segment."""
-        raise NotImplementedError("Question 5: implement ColumnSegment.to_pointer()")
+        return DataPointer(
+            self.start,
+            self.count,
+            block_pointer,
+            self.statistics,
+            constant_value=self.statistics.constant_value
+        )
 
 
 class ColumnData:
