@@ -41,10 +41,13 @@ class DatabaseFacadeQuestionTests(unittest.TestCase):
         rows = engine.scan_rows("analytics", "events", 1, 2)
         checkpoint = engine.checkpoint_table("analytics", "events")
 
-        self.assertEqual(rows, [
-            {"id": 2, "kind": "b"},
-            {"id": 3, "kind": "c"},
-        ])
+        self.assertEqual(
+            rows,
+            [
+                {"id": 2, "kind": "b"},
+                {"id": 3, "kind": "c"},
+            ],
+        )
         self.assertEqual(checkpoint["table_name"], "events")
         self.assertEqual(checkpoint["total_rows"], 3)
 
@@ -68,21 +71,32 @@ class DatabaseFacadeQuestionTests(unittest.TestCase):
         second_window = engine.scan_rows("analytics", "events", 2, 3)
         clipped_tail = engine.scan_rows("analytics", "events", 4, 3)
 
-        self.assertEqual(first_window, [
-            {"id": 2, "kind": "b"},
-            {"id": 3, "kind": "c"},
-            {"id": 4, "kind": "d"},
-        ])
-        self.assertEqual(second_window, [
-            {"id": 3, "kind": "c"},
-            {"id": 4, "kind": "d"},
-            {"id": 5, "kind": "e"},
-        ])
-        self.assertEqual(clipped_tail, [
-            {"id": 5, "kind": "e"},
-        ])
+        self.assertEqual(
+            first_window,
+            [
+                {"id": 2, "kind": "b"},
+                {"id": 3, "kind": "c"},
+                {"id": 4, "kind": "d"},
+            ],
+        )
+        self.assertEqual(
+            second_window,
+            [
+                {"id": 3, "kind": "c"},
+                {"id": 4, "kind": "d"},
+                {"id": 5, "kind": "e"},
+            ],
+        )
+        self.assertEqual(
+            clipped_tail,
+            [
+                {"id": 5, "kind": "e"},
+            ],
+        )
 
-    def test_repeated_actions_append_and_checkpoint_without_resetting_state(self) -> None:
+    def test_repeated_actions_append_and_checkpoint_without_resetting_state(
+        self,
+    ) -> None:
         engine = self.make_engine()
         self.create_events_table(engine)
 
@@ -109,18 +123,26 @@ class DatabaseFacadeQuestionTests(unittest.TestCase):
 
         self.assertEqual(first_checkpoint["total_rows"], 2)
         self.assertEqual(second_checkpoint["total_rows"], 4)
-        self.assertEqual(rows_after_repeated_actions, [
-            {"id": 1, "kind": "a"},
-            {"id": 2, "kind": "b"},
-            {"id": 3, "kind": "c"},
-            {"id": 4, "kind": "d"},
-        ])
+        self.assertEqual(
+            rows_after_repeated_actions,
+            [
+                {"id": 1, "kind": "a"},
+                {"id": 2, "kind": "b"},
+                {"id": 3, "kind": "c"},
+                {"id": 4, "kind": "d"},
+            ],
+        )
 
-    def test_insert_rows_spills_across_multiple_row_groups_when_capacity_is_small(self) -> None:
+    def test_insert_rows_spills_across_multiple_row_groups_when_capacity_is_small(
+        self,
+    ) -> None:
         engine = self.make_engine()
         self.create_events_table(engine)
 
-        table_entry = engine.database.get_catalog().get_schema("analytics").get_table("events")
+        schema = engine.database.get_catalog().get_schema("analytics")
+        assert schema is not None
+        table_entry = schema.get_table("events")
+        assert table_entry is not None
         table_entry.data_table.row_groups.row_group_size = 2
 
         engine.insert_rows(
@@ -136,13 +158,16 @@ class DatabaseFacadeQuestionTests(unittest.TestCase):
         )
 
         self.assertEqual(len(table_entry.data_table.row_groups.row_groups.nodes), 3)
-        self.assertEqual(engine.scan_rows("analytics", "events", 0, 10), [
-            {"id": 1, "kind": "a"},
-            {"id": 2, "kind": "b"},
-            {"id": 3, "kind": "c"},
-            {"id": 4, "kind": "d"},
-            {"id": 5, "kind": "e"},
-        ])
+        self.assertEqual(
+            engine.scan_rows("analytics", "events", 0, 10),
+            [
+                {"id": 1, "kind": "a"},
+                {"id": 2, "kind": "b"},
+                {"id": 3, "kind": "c"},
+                {"id": 4, "kind": "d"},
+                {"id": 5, "kind": "e"},
+            ],
+        )
 
     def test_facade_raises_errors_for_duplicate_tables_and_invalid_rows(self) -> None:
         engine = self.make_engine()

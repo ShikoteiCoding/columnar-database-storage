@@ -32,6 +32,19 @@ class BlocksQuestionTests(unittest.TestCase):
         self.assertEqual(block.read(0, 9), b"abcdefghi")
         self.assertEqual(block.remaining_capacity(), BLOCK_SIZE - 9)
 
+    def test_data_block_reserve_tracks_offsets_without_requiring_a_payload(
+        self,
+    ) -> None:
+        manager = BlockManager()
+        block = manager.allocate_block()
+
+        first_offset = block.reserve(3)
+        second_offset = block.reserve(5)
+
+        self.assertEqual(first_offset, 0)
+        self.assertEqual(second_offset, 3)
+        self.assertEqual(block.remaining_capacity(), BLOCK_SIZE - 8)
+
     def test_data_block_rejects_overflowing_writes(self) -> None:
         manager = BlockManager()
         block = manager.allocate_block()
@@ -40,6 +53,15 @@ class BlocksQuestionTests(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             block.write(b"!")
+
+    def test_data_block_rejects_overflowing_reservations(self) -> None:
+        manager = BlockManager()
+        block = manager.allocate_block()
+
+        block.reserve(BLOCK_SIZE)
+
+        with self.assertRaises(ValueError):
+            block.reserve(1)
 
     def test_block_manager_allocates_monotonic_ids(self) -> None:
         manager = BlockManager()
@@ -54,75 +76,102 @@ class BlocksQuestionTests(unittest.TestCase):
         manager = BlockManager()
         partials = PartialBlockManager(manager)
 
-        # The allocator returns a precise `(block_id, offset)` slot, so the bytes are addressable rather than random.
-        first = partials.allocate(8)
-        first.pointer.block_id
-        first.block.write(b"12345678")
-        # Registering the block advertises only its contiguous unused tail for later packing.
-        partials.register_block(first.block)
+        # Reserving a payload consumes only the requested prefix and keeps the tail available for reuse.
+        first = partials.reserve(8)
 
         # The next write reuses that known tail to avoid wasting the rest of the same block.
-        second = partials.allocate(4)
+        second = partials.reserve(4)
 
-        self.assertEqual(second.pointer.block_id, first.pointer.block_id)
-        self.assertEqual(second.pointer.offset, 8)
+        self.assertEqual(second.block_id, first.block_id)
+        self.assertEqual(second.offset, 8)
 
     def test_partial_block_manager_chains_reuse_consistently(self) -> None:
         manager = BlockManager()
         partials = PartialBlockManager(manager)
 
-        first = partials.allocate(5)
-        first.block.write(b"hello")
+        first = partials.reserve(5)
         # This models multiple small column segments being packed back-to-back inside one block.
-        partials.register_block(first.block)
-
-        second = partials.allocate(4)
-        second.block.write(b"data")
-        partials.register_block(second.block)
+        second = partials.reserve(4)
 
         # Reusing the same block keeps free space contiguous instead of fragmenting it across many blocks.
-        third = partials.allocate(3)
+        third = partials.reserve(3)
 
-        self.assertEqual(second.pointer.block_id, first.pointer.block_id)
-        self.assertEqual(second.pointer.offset, 5)
-        self.assertEqual(third.pointer.block_id, first.pointer.block_id)
-        self.assertEqual(third.pointer.offset, 9)
-        self.assertEqual(first.block.read(0, 9), b"hellodata")
+        self.assertEqual(second.block_id, first.block_id)
+        self.assertEqual(second.offset, 5)
+        self.assertEqual(third.block_id, first.block_id)
+        self.assertEqual(third.offset, 9)
+        self.assertEqual(len(partials.partial_blocks), 1)
+
+    def test_partial_block_allocation_reserve_consumes_tentative_slot(self) -> None:
+        manager = BlockManager()
+        partials = PartialBlockManager(manager)
+
+        allocation = partials.allocate(8)
+        pointer = allocation.reserve(8)
+
+        self.assertEqual(pointer, allocation.pointer)
+        self.assertEqual(pointer.offset, 0)
+        self.assertEqual(allocation.block.remaining_capacity(), BLOCK_SIZE - 8)
 
     def test_large_payload_can_force_new_block(self) -> None:
         manager = BlockManager()
         partials = PartialBlockManager(manager)
 
-        first = partials.allocate(BLOCK_SIZE - 2)
-        first.block.write(b"x" * (BLOCK_SIZE - 2))
+        first = partials.reserve(BLOCK_SIZE - 2)
         # Only the tiny tail is reusable, so a larger payload must go elsewhere.
-        partials.register_block(first.block)
 
         # A nearly full block should not be reused for a payload that no longer fits safely.
-        second = partials.allocate(16)
+        second = partials.reserve(16)
 
-        self.assertNotEqual(second.pointer.block_id, first.pointer.block_id)
+        self.assertNotEqual(second.block_id, first.block_id)
 
-    def test_partial_block_manager_allocates_new_block_after_reuse_overflow(self) -> None:
+    def test_partial_block_manager_allocates_new_block_after_reuse_overflow(
+        self,
+    ) -> None:
         manager = BlockManager()
         partials = PartialBlockManager(manager)
 
-        first = partials.allocate(BLOCK_SIZE - 4)
-        first.block.write(b"x" * (BLOCK_SIZE - 4))
-        partials.register_block(first.block)
+        first = partials.reserve(BLOCK_SIZE - 4)
 
         # The second allocation consumes the exact remaining tail in that block.
-        second = partials.allocate(4)
-        second.block.write(b"yyyy")
-        partials.register_block(second.block)
+        second = partials.reserve(4)
 
         # Once reuse consumes the last bytes, the following write must spill into a fresh block.
-        third = partials.allocate(1)
+        third = partials.reserve(1)
 
-        self.assertEqual(second.pointer.block_id, first.pointer.block_id)
-        self.assertEqual(second.pointer.offset, BLOCK_SIZE - 4)
-        self.assertNotEqual(third.pointer.block_id, first.pointer.block_id)
-        self.assertEqual(second.block.remaining_capacity(), 0)
+        first_block = manager.get_block(first.block_id)
+
+        self.assertEqual(second.block_id, first.block_id)
+        self.assertEqual(second.offset, BLOCK_SIZE - 4)
+        self.assertNotEqual(third.block_id, first.block_id)
+        self.assertEqual(first_block.remaining_capacity(), 0)
+
+    def test_partial_block_manager_rejects_one_payload_larger_than_a_block(
+        self,
+    ) -> None:
+        manager = BlockManager()
+        partials = PartialBlockManager(manager)
+
+        # At this stage the candidate only knows about block-sized payload packing,
+        # so a single payload larger than one block should fail immediately.
+        with self.assertRaises(ValueError):
+            partials.reserve(BLOCK_SIZE + 1)
+
+    def test_register_block_skips_duplicates_and_full_blocks(self) -> None:
+        manager = BlockManager()
+        partials = PartialBlockManager(manager)
+        block = manager.allocate_block()
+
+        block.write(b"abc")
+        partials.register_block(block)
+        partials.register_block(block)
+
+        self.assertEqual(partials.partial_blocks.count(block), 1)
+
+        block.write(b"x" * (BLOCK_SIZE - 3))
+        partials.register_block(block)
+
+        self.assertNotIn(block, partials.partial_blocks)
 
     def test_mark_block_as_modified_tracks_reclaim_candidates(self) -> None:
         manager = BlockManager()

@@ -8,7 +8,9 @@ class ColumnSegmentQuestionTests(unittest.TestCase):
     """Question 5: column segment behavior."""
 
     def test_segment_keeps_column_metadata_for_later_storage_decisions(self) -> None:
-        segment = ColumnSegment(start=0, column_name="value", column_type=int, max_values=4)
+        segment = ColumnSegment(
+            start=0, column_name="value", column_type=int, max_values=4
+        )
 
         # The segment already knows which logical column it belongs to, and keeping the
         # declared type nearby makes later serialization and size heuristics easier to explain.
@@ -74,11 +76,15 @@ class ColumnSegmentQuestionTests(unittest.TestCase):
         segment.append(list(range(8)))
 
         # Repeated small scans model vectorized execution reading a segment window by window.
-        windows = [segment.scan(local_offset=offset, count=2) for offset in range(0, 8, 2)]
+        windows = [
+            segment.scan(local_offset=offset, count=2) for offset in range(0, 8, 2)
+        ]
 
         self.assertEqual(windows, [[0, 1], [2, 3], [4, 5], [6, 7]])
 
-    def test_estimate_size_bytes_is_stable_for_empty_segment_and_non_decreasing_after_appends(self) -> None:
+    def test_estimate_size_bytes_is_stable_for_empty_segment_and_non_decreasing_after_appends(
+        self,
+    ) -> None:
         segment = ColumnSegment(start=0, column_name="value", max_values=10)
 
         # `estimate_size_bytes()` is not meant to be exact accounting. It is a planning heuristic
@@ -107,7 +113,9 @@ class ColumnSegmentQuestionTests(unittest.TestCase):
         self.assertEqual(pointer.tuple_count, 3)
         self.assertEqual(pointer.block_pointer.block_id, 9)
 
-    def test_to_pointer_for_non_constant_segment_keeps_explicit_block_location(self) -> None:
+    def test_to_pointer_for_non_constant_segment_keeps_explicit_block_location(
+        self,
+    ) -> None:
         segment = ColumnSegment(start=20, column_name="value", max_values=10)
         segment.append([5, 6])
         segment.append([7, 8])
