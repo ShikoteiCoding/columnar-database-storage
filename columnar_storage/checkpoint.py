@@ -75,9 +75,17 @@ class SingleFileTableDataWriter:
     """Educational stand-in for DuckDB's table metadata writer.
 
     Goal for the candidate:
-    - write table statistics
-    - write row-group metadata
-    - return a catalog-facing payload with a pointer to table metadata
+    - write table-level summary metadata into a referenced metadata blob
+    - write row-group metadata into that same referenced blob
+    - return a smaller catalog-facing payload with a pointer to table metadata
+
+    There are two metadata layers during checkpointing:
+    - the catalog-facing payload returned from `finalize_table()`
+    - the referenced table metadata blob written through `MetadataWriter`
+
+    In this exercise, `table_statistics` belong to the referenced table
+    metadata blob as logical table-level summaries. Lower-level physical block
+    details stay attached to row groups and `DataPointer` objects.
     """
 
     def __init__(self, metadata_writer: MetadataWriter) -> None:

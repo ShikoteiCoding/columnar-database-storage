@@ -131,7 +131,9 @@ class CheckpointQuestionTests(unittest.TestCase):
         writer = MetadataWriter()
         table_writer = SingleFileTableDataWriter(writer)
 
-        # The catalog keeps one pointer to the table metadata blob rather than inlining everything.
+        # This isolates the two metadata layers:
+        # - the catalog-facing payload keeps a pointer plus the row-group-derived `total_rows`
+        # - the referenced metadata blob keeps richer table-level summaries such as `table_statistics`
         payload = table_writer.finalize_table(
             table_name="events",
             table_statistics={"row_count": 3},
@@ -140,6 +142,8 @@ class CheckpointQuestionTests(unittest.TestCase):
         
         self.assertEqual(payload["table_name"], "events")
         self.assertEqual(payload["table_pointer"], {"index": 0})
+        # No row groups were provided in this isolated unit test, so the catalog-facing row total is zero
+        # even though the deeper table metadata blob still preserves the logical summary statistics.
         self.assertEqual(payload["total_rows"], 0)
         self.assertEqual(writer.read_payload({"index": 0})["table_statistics"], {"row_count": 3})
 

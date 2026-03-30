@@ -208,7 +208,7 @@ class ColumnData:
     - own a `SegmentTree` of `ColumnSegment` nodes
     - append values while creating new segments when needed
     - scan values by absolute row range
-    - checkpoint into `DataPointer` metadata
+    - checkpoint into `DataPointer` metadata using `PartialBlockManager`
     """
 
     def __init__(self, definition: ColumnDefinition, row_group_start: int, segment_size: int = 2048) -> None:

@@ -569,6 +569,23 @@ classDiagram
 		+finalize_table(table_name: str, table_statistics: dict, row_group_pointers: list[RowGroupPointer]) dict
 	}
 
+	class DataBlock {
+		+reserve(size: int) int
+	}
+
+	class PartialBlockAllocation {
+		+reserve(payload_size: int) BlockPointer
+	}
+
+	class PartialBlockManager {
+		+allocate(payload_size: int) PartialBlockAllocation
+		+reserve(payload_size: int) BlockPointer
+	}
+
+	class ColumnData {
+		+checkpoint(partial_blocks: PartialBlockManager) list[DataPointer]
+	}
+
 	class RowGroup {
 		+checkpoint(block_manager: BlockManager, partial_blocks: PartialBlockManager) RowGroupPointer
 	}
