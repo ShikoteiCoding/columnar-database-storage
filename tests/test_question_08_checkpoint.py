@@ -156,7 +156,7 @@ class CheckpointQuestionTests(unittest.TestCase):
             table_statistics={"row_count": 3},
             row_group_pointers=[],
         )
-
+        
         self.assertEqual(payload["table_name"], "events")
         self.assertEqual(payload["table_pointer"], {"index": 0})
         # No row groups were provided in this isolated unit test, so the catalog-facing row total is zero

@@ -55,19 +55,20 @@ class MetadataWriter:
 
     def get_meta_block_pointer(self) -> dict[str, int]:
         """Return a pointer to the next metadata slot."""
-        raise NotImplementedError(
-            "Question 8: implement MetadataWriter.get_meta_block_pointer()"
-        )
+        return {"index": len(self.payloads)}
 
     def write_payload(self, payload: dict[str, Any]) -> dict[str, int]:
         """Store a payload and return its pointer."""
-        raise NotImplementedError(
-            "Question 8: implement MetadataWriter.write_payload()"
-        )
+        self.payloads.append(payload)
+        return {"index": len(self.payloads) - 1}
+        
 
     def read_payload(self, pointer: dict[str, int]) -> dict[str, Any]:
         """Read a payload by pointer."""
-        raise NotImplementedError("Question 8: implement MetadataWriter.read_payload()")
+        index = pointer["index"]
+        if index < 0 or index >= len(self.payloads):
+            raise IndexError(f"pointer '{pointer}' out of range")
+        return self.payloads[pointer["index"]]
 
 
 class SingleFileTableDataWriter:
@@ -90,6 +91,19 @@ class SingleFileTableDataWriter:
     def __init__(self, metadata_writer: MetadataWriter) -> None:
         self.metadata_writer = metadata_writer
 
+    def _validate_row_group_pointers(self, row_group_pointers: list[RowGroupPointer]) -> None:
+        """Reject overlapping logical row ranges before writing table metadata."""
+        if not row_group_pointers:
+            return
+
+        ordered_pointers = sorted(row_group_pointers, key=lambda pointer: pointer.row_start)
+        previous_end = ordered_pointers[0].row_start + ordered_pointers[0].tuple_count
+
+        for pointer in ordered_pointers[1:]:
+            if pointer.row_start < previous_end:
+                raise ValueError("row group pointers must not overlap")
+            previous_end = pointer.row_start + pointer.tuple_count
+
     def finalize_table(
         self,
         *,
@@ -97,13 +111,19 @@ class SingleFileTableDataWriter:
         table_statistics: dict[str, Any],
         row_group_pointers: list[RowGroupPointer],
     ) -> dict[str, Any]:
-        """Build the final table metadata payload.
+        """Build the final table metadata payload."""
 
-        `total_rows` in the catalog-facing payload should be derived from the
-        serialized row-group pointers included in this write, while
-        `table_statistics` remain stored inside the metadata blob referenced by
-        `table_pointer`.
-        """
-        raise NotImplementedError(
-            "Question 8: implement SingleFileTableDataWriter.finalize_table()"
+        self._validate_row_group_pointers(row_group_pointers)
+
+        table_pointer = self.metadata_writer.write_payload(
+            {
+                "table_statistics": table_statistics,
+                "row_groups": [pointer.serialize() for pointer in row_group_pointers],
+            }
         )
+
+        return {
+            "table_name": table_name,
+            "total_rows": sum(pointer.tuple_count for pointer in row_group_pointers),
+            "table_pointer": table_pointer,
+        }
