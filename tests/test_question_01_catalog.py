@@ -41,7 +41,7 @@ class CatalogQuestionTests(unittest.TestCase):
         entry = schema.create_table(definition, table)
         looked_up = schema.get_table("events")
 
-        self.assertIsInstance(entry, DuckTableEntry)
+        assert isinstance(entry, DuckTableEntry)
         self.assertEqual(entry.definition.name, "events")
         self.assertIs(entry.data_table, table)
         self.assertIsNotNone(looked_up)
